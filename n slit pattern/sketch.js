@@ -60,7 +60,8 @@ function draw() {
         interferencePlot = []; diffractionPlot = []
     }
     else {
-        t += deltaTime / 1000
+        // t += deltaTime / 1000
+        t += 16/1000
     }
 
     const ScreenPos = t * P.ScreenRange / P.TimePerSweep
@@ -161,8 +162,9 @@ function draw() {
     const latestPosX = toGraphPos(interferencePlot[interferencePlot.length - 1]).x
 
     let col = displayColor(P.Wavelength, latestIntensity, 0.5)
-    if (col[0]==0 && col[1]==0 &&col[2]==0) {col = [255, 255, 255]}
+    if (col[0]==0 && col[1]==0 &&col[2]==0) {col = [10*latestIntensity, 10*latestIntensity, 10*latestIntensity]}
     sCanvas.stroke(col[0], col[1], col[2])
+    sCanvas.strokeWeight(phasersCanvasSize/P.TimePerSweep*(16/1000)+1)
     sCanvas.line(latestPosX, sCanvas.height / 2 + 100, latestPosX, sCanvas.height / 2 - 100)
     sCanvas.line(-latestPosX+sCanvas.width, sCanvas.height / 2 + 100, -latestPosX+sCanvas.width, sCanvas.height / 2 - 100)
 }
