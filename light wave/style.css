@@ -1,0 +1,118 @@
+#mainCanvas {
+    border-width: 10px;
+    margin:auto;
+    border-style: solid;
+    border-color: rgb(60, 65, 65);
+    border-radius: 10px;
+    box-shadow: 0px 0px 5px;
+}
+#scale {
+    position:absolute;
+    padding:10px;
+}
+#content {
+    margin:auto;
+    display: flex;
+    width: 920px;
+}
+#divCanvas {
+    justify-content: center;
+    display: flex;
+    float: left;
+}
+#divControl {
+    float:right;
+    padding-left:10px;
+    height: 600px;
+    width: 270px;
+}
+#controlTop {
+    background-color: rgb(60, 65, 65);
+    border-width: 10px;
+    border-style: solid;
+    border-color: rgb(60, 65, 65);
+    border-radius: 10px;
+    box-shadow: 0px 0px 5px;    
+    margin-bottom: 10px;
+}
+#controlMiddle {
+    background-color: rgb(60, 65, 65);
+    border-width: 10px;
+    border-style: solid;
+    border-color: rgb(60, 65, 65);
+    border-radius: 10px;
+    box-shadow: 0px 0px 5px;
+    margin-bottom: 10px;
+}
+#controlBottom {
+    background-color: rgb(60, 65, 65);
+    border-width: 10px;
+    border-style: solid;
+    border-color: rgb(60, 65, 65);
+    border-radius: 10px;
+    box-shadow: 0px 0px 5px;
+}
+#scenarioDropdown {
+    height: 150px;
+}
+body {
+    background-color: rgb(40, 43, 43);
+    margin:5px;
+    font-family: "Rubik", sans-serif;
+}
+select {
+    margin:5px;
+    border-radius: 5px;
+    border-color: rgb(30, 40, 40);
+    border-width: 2px;
+    border-style: solid;
+    height: 40px;
+    width: 50%;
+    background-color: lightgrey;
+}
+.controlTitle {
+    color:white;
+    text-shadow: 1px 1px 2px black;
+    box-shadow: 2px 2px 4px black;
+    margin:0;
+    background-color: rgb(40, 50, 50);
+    border-color: rgb(40, 50, 50);
+    border-width: 5px;
+    border-style: solid;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    text-align: center;
+}
+h3 {
+    color:white;
+    text-shadow: 1px 1px 2px black;
+    margin:0;
+}
+button {
+    margin:5px;
+    border-radius: 5px;
+    border-color: rgb(30, 40, 40);
+    border-width: 2px;
+    border-style: solid;
+    background-color: lightgrey;
+    width: 95%;
+    background-color:rgb(85, 85, 255);
+    box-shadow: 2px 2px 5px black;
+    font-size:x-large;
+    color:white;
+}
+button:active {
+    background-color: rgb(58, 58, 134);
+    box-shadow: 0px 0px 0px black;
+}
+#waveLengthDisplay {
+    color: white;
+    font-size:large;
+}
+#numWavelengths,#brightness {
+    width: 90%;
+}
+#title {
+    color:white;
+    text-shadow: 2px 2px 4px black;
+}

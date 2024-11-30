@@ -1,1 +1,3 @@
 pick a consistent style for all simulations
+
+absorption in the light wave simulation finally
