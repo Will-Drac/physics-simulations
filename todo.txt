@@ -1,3 +1,27 @@
 pick a consistent style for all simulations
 
 absorption in the light wave simulation finally
+
+New ideas:
+    wave on a spring, with connected springs of different spring constant
+
+    mechanics roller coaster OR mechanics sandbox
+
+    nuclear physics stuff (not exactly sure what)
+
+    3d magnetic field of solenoid, loop, and wire
+        visualizing the field with arrows and having particles go through, all real time
+
+    induction things
+
+    small angle approximation vs real in pendulums
+
+    sound interference: place sources and see how they interfere in 2d space
+
+    doppler effect, seeing the waves spread (looking compressed in front and elongated behind), and actually hearing the sounds
+
+    beats but you can see the graph and hear them
+
+    thin films, somehow
+
+    capacitors, somehow
