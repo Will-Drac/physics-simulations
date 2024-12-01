@@ -3,8 +3,10 @@ export default /*wgsl*/ `
 struct waveUniforms {
     startValue: f32,
     tension: f32,
-    massPerLength: f32
-  }
+    massPerLength1: f32,
+    massPerLength2: f32,
+    transition: f32
+}
 
 @group(0) @binding(0) var<storage, read_write> points: array<f32>;
 @group(0) @binding(1) var<storage, read_write> pointsOld: array<f32>;
@@ -25,8 +27,13 @@ const pointSpacing = _POINTSPACING;
         pointsOld[i] = 0;
     }
     else {
+        var m = u.massPerLength1;
+        if (f32(i)/f32(numPoints) > u.transition) {m = u.massPerLength2;}
+
         // update the wave according to the equation
-        pointsOld[i] = ((u.tension/u.massPerLength)*(0.016/pointSpacing)*(points[i-1]-2*points[i]+points[i+1])+2*points[i]-pointsOld[i]);
+        pointsOld[i] = clamp((u.tension/m)*(0.016/pointSpacing)*(points[i-1]-2*points[i]+points[i+1]), -5, 5)+2*points[i]-pointsOld[i];
+
+        pointsOld[i] = clamp(pointsOld[i], -300, 300);
     }
 }
 

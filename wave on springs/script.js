@@ -1,9 +1,10 @@
-const numPoints = 1500
+const numPoints = 400
 const padding = 30
 
 import clearCode from "./shaders/clear.wgsl.js"
 import updateCode from "./shaders/update.wgsl.js"
 import displayCode from "./shaders/display.wgsl.js"
+import styleCode from "./shaders/style.wgsl.js"
 import renderCode from "./shaders/render.wgsl.js"
 
 async function main() {
@@ -24,6 +25,8 @@ async function main() {
         format: presentationFormat
     })
 
+    let shouldStop = false
+    let pulseTime = 1
     let cursor = { x: 0, y: 0 }
     document.addEventListener("mousemove", function (e) {
         cursor = {
@@ -32,8 +35,19 @@ async function main() {
         }
     })
     let mouseDown = false
-    document.addEventListener("mousedown", function (e) { mouseDown = true })
-    document.addEventListener("mouseup", function (e) { mouseDown = false })
+    document.addEventListener("mousedown", function (e) {
+        mouseDown = (cursor.x > 0 && cursor.x < canvas.clientWidth && cursor.y > 0 && cursor.y < canvas.clientHeight)
+    })
+    document.addEventListener("mouseup", function (e) {
+        mouseDown = false
+    })
+    document.getElementById("pulseButton").addEventListener("click", function () {
+        pulseTime = 0
+    })
+    document.getElementById("resetButton").addEventListener("click", function () {
+        shouldStop = true
+    })
+
 
     const linearSampler = device.createSampler({
         magFilter: "linear",
@@ -44,7 +58,14 @@ async function main() {
 
 
     const displayTexture = device.createTexture({
-        label: "texture that will be displayed to the screen",
+        label: "texture holding the first pass of the rendered wave",
+        format: "rgba8unorm",
+        size: [canvas.clientWidth, canvas.clientHeight],
+        usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
+    })
+
+    const styleTexture = device.createTexture({
+        label: "texture for the styled pass of the wave",
         format: "rgba8unorm",
         size: [canvas.clientWidth, canvas.clientHeight],
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
@@ -77,7 +98,7 @@ async function main() {
         label: "updating spring module",
         code: updateCode
             .replace("_NUMPOINTS", numPoints)
-            .replace("_POINTSPACING", (canvas.clientWidth-2*padding)/numPoints)
+            .replace("_POINTSPACING", (canvas.clientWidth - 2 * padding) / numPoints)
     })
 
     const updatePipeline = device.createComputePipeline({
@@ -102,14 +123,16 @@ async function main() {
     ]
 
     const waveUniformsBuffer = device.createBuffer({
-        size: 12,
+        size: 20,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
-    const waveUniformsValues = new ArrayBuffer(12)
+    const waveUniformsValues = new ArrayBuffer(20)
     const waveUniformsViews = {
         startValue: new Float32Array(waveUniformsValues, 0, 1),
         tension: new Float32Array(waveUniformsValues, 4, 1),
-        massPerLength: new Float32Array(waveUniformsValues, 8, 1),
+        massPerLength1: new Float32Array(waveUniformsValues, 8, 1),
+        massPerLength2: new Float32Array(waveUniformsValues, 12, 1),
+        transition: new Float32Array(waveUniformsValues, 16, 1),
     }
 
 
@@ -127,6 +150,32 @@ async function main() {
         compute: {
             module: displayModule
         }
+    })
+
+
+
+    const styleModule = device.createShaderModule({
+        label: "styling the display module",
+        code: styleCode
+            .replace("_NUMPOINTS", numPoints)
+            .replace("_TEXTURESIZE", `vec2f(${canvas.clientWidth}, ${canvas.clientHeight})`)
+            .replace("_SIDEPADDING", padding + ".")
+    })
+
+    const stylePipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: {
+            module: styleModule
+        }
+    })
+
+    const styleBindGroup = device.createBindGroup({
+        layout: stylePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: displayTexture.createView() },
+            { binding: 1, resource: styleTexture.createView() },
+            { binding: 2, resource: { buffer: waveUniformsBuffer } }
+        ]
     })
 
 
@@ -156,7 +205,7 @@ async function main() {
     const renderBindGroup = device.createBindGroup({
         layout: renderPipeline.getBindGroupLayout(0),
         entries: [
-            { binding: 0, resource: displayTexture.createView() },
+            { binding: 0, resource: styleTexture.createView() },
             { binding: 1, resource: linearSampler }
         ]
     })
@@ -165,7 +214,11 @@ async function main() {
 
     let iterations = 0
     function render(time) {
+        if (shouldStop) { main(); return }
+
         iterations++
+
+        pulseTime += 0.016
 
         const clearEncoder = device.createCommandEncoder()
         const clearPass = clearEncoder.beginComputePass()
@@ -179,9 +232,11 @@ async function main() {
 
 
 
-        waveUniformsViews.startValue[0] = mouseDown ? cursor.y - canvas.clientHeight / 2 : 0
-        waveUniformsViews.tension[0] = 10
-        waveUniformsViews.massPerLength[0] = 1
+        waveUniformsViews.startValue[0] = mouseDown ? cursor.y - canvas.clientHeight / 2 : 120 * Math.sin(2 * Math.PI * Math.min(pulseTime, 1))
+        waveUniformsViews.tension[0] = 100
+        waveUniformsViews.massPerLength1[0] = document.getElementById("spring1MassDisplay").innerText = document.getElementById("spring1Mass").value
+        waveUniformsViews.massPerLength2[0] = document.getElementById("spring2MassDisplay").innerText = document.getElementById("spring2Mass").value
+        waveUniformsViews.transition[0] = document.getElementById("transitionDisplay").innerText = document.getElementById("transition").value
         device.queue.writeBuffer(waveUniformsBuffer, 0, waveUniformsValues)
 
         const updateBindGroup = device.createBindGroup({
@@ -223,6 +278,18 @@ async function main() {
 
         const displayCommandBuffer = displayEncoder.finish()
         device.queue.submit([displayCommandBuffer])
+
+
+
+        const styleEncoder = device.createCommandEncoder()
+        const stylePass = styleEncoder.beginComputePass()
+        stylePass.setPipeline(stylePipeline)
+        stylePass.setBindGroup(0, styleBindGroup)
+        stylePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+        stylePass.end()
+
+        const styleCommandBuffer = styleEncoder.finish()
+        device.queue.submit([styleCommandBuffer])
 
 
 
