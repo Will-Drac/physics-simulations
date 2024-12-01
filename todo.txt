@@ -3,7 +3,7 @@ pick a consistent style for all simulations
 absorption in the light wave simulation finally
 
 New ideas:
-    wave on a spring, with connected springs of different spring constant
+    wave on a spring, with connected springs of different spring constant POLISH THIS UP?
 
     mechanics roller coaster OR mechanics sandbox
 
