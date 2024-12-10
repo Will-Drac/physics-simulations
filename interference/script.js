@@ -2,6 +2,10 @@ import updateCode from "./shaders/update.wgsl.js"
 import displayCode from "./shaders/display.wgsl.js"
 import renderCode from "./shaders/render.wgsl.js"
 
+function clamp(v, min, max) {
+    return Math.min(Math.max(v, min), max)
+}
+
 async function main() {
     // set up the device (gpu)
     const adapter = await navigator.gpu?.requestAdapter()
@@ -13,13 +17,44 @@ async function main() {
 
     const canvas = document.getElementById("display")
     const context = canvas.getContext("webgpu")
-    const canvasBounds = canvas.getBoundingClientRect()
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat()
     context.configure({
         device,
         format: presentationFormat
     })
 
+
+    let e1Pos = { x: 100, y: 100, grabbed: false }
+    let e2Pos = { x: 400, y: 400, grabbed: false }
+    let cursor = { x: 0, y: 0 }
+    document.addEventListener("mousemove", function (e) {
+        const canvasBounds = canvas.getBoundingClientRect()
+        cursor = {
+            x: e.clientX - canvasBounds.left,
+            y: e.clientY - canvasBounds.top
+        }
+
+        if (e1Pos.grabbed) {
+            e1Pos.x = clamp(cursor.x, 0, canvas.clientWidth)
+            e1Pos.y = clamp(cursor.y, 0, canvas.clientHeight)
+        }
+        else if (e2Pos.grabbed) {
+            e2Pos.x = clamp(cursor.x, 0, canvas.clientWidth)
+            e2Pos.y = clamp(cursor.y, 0, canvas.clientHeight)
+        }
+    })
+    document.addEventListener("mousedown", function (e) {
+        if ((cursor.x - e1Pos.x) ** 2 + (cursor.y - e1Pos.y) ** 2 < 20 ** 2) {
+            e1Pos.grabbed = true
+        }
+        else if ((cursor.x - e2Pos.x) ** 2 + (cursor.y - e2Pos.y) ** 2 < 20 ** 2) {
+            e2Pos.grabbed = true
+        }
+    })
+    document.addEventListener("mouseup", function (e) {
+        e1Pos.grabbed = false
+        e2Pos.grabbed = false
+    })
 
 
     const linearSampler = device.createSampler({
@@ -40,7 +75,7 @@ async function main() {
 
     const updateModule = device.createShaderModule({
         label: "module to update the wave",
-        code: updateCode
+        code: updateCode.replace("_CANVASSIZE", `vec2u(${canvas.clientWidth}, ${canvas.clientHeight})`)
     })
 
     const updatePipeline = device.createComputePipeline({
@@ -51,10 +86,10 @@ async function main() {
     })
 
     const uniformsBuffer = device.createBuffer({
-        size: 68,
+        size: 56,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
-    const uniformsValues = new ArrayBuffer(48)
+    const uniformsValues = new ArrayBuffer(56)
     const uniformsViews = {
         e1Pos: new Float32Array(uniformsValues, 0, 2),
         e1PhaseOffset: new Float32Array(uniformsValues, 8, 1),
@@ -65,6 +100,7 @@ async function main() {
         e2Amplitude: new Float32Array(uniformsValues, 36, 1),
         e2Frequency: new Float32Array(uniformsValues, 40, 1),
         time: new Float32Array(uniformsValues, 44, 1),
+        canvasWidth: new Float32Array(uniformsValues, 48, 1),
     }
 
     const updateBindGroup = device.createBindGroup({
@@ -137,20 +173,33 @@ async function main() {
 
 
 
-    let iterations = 0
+    let timeOld = 0
+    let t = 0
     function render(time) {
 
-        uniformsViews.time[0] = time/10000
+        const dt = time / 1000 - timeOld
+        timeOld = time / 1000
 
-        uniformsViews.e1Pos[0] = 100; uniformsViews.e1Pos[1] = 100
-        uniformsViews.e1Amplitude[0] = 1
-        uniformsViews.e1PhaseOffset[0] = 0
-        uniformsViews.e1Frequency[0] = 20
+        const timeScale = (document.getElementById("timeScale").value) ** 5
+        document.getElementById("timeScaleDisplay").innerText = timeScale.toFixed(3) + "x real time"
+        t += timeScale * dt
 
-        uniformsViews.e2Pos[0] = 400+100*Math.sin(time/1000); uniformsViews.e2Pos[1] = 400
-        uniformsViews.e2Amplitude[0] = 1
-        uniformsViews.e2PhaseOffset[0] = 0
-        uniformsViews.e2Frequency[0] = 20
+        uniformsViews.time[0] = t % 100
+
+        const widthScale = document.getElementById("widthScale").value
+        uniformsViews.canvasWidth[0] = widthScale
+
+        document.getElementById("e1PosDisplay").innerText = `(${(e1Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale-e1Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
+        uniformsViews.e1Pos[0] = e1Pos.x; uniformsViews.e1Pos[1] = e1Pos.y
+        uniformsViews.e1Amplitude[0] = document.getElementById("e1Amplitude").value
+        uniformsViews.e1Frequency[0] = document.getElementById("e1Frequency").value
+        uniformsViews.e1PhaseOffset[0] = document.getElementById("e1PhaseOffset").value * Math.PI
+
+        document.getElementById("e2PosDisplay").innerText = `(${(e2Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale-e2Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
+        uniformsViews.e2Pos[0] = e2Pos.x; uniformsViews.e2Pos[1] = e2Pos.y
+        uniformsViews.e2Amplitude[0] = document.getElementById("e2Amplitude").value
+        uniformsViews.e2Frequency[0] = document.getElementById("e2Frequency").value
+        uniformsViews.e2PhaseOffset[0] = document.getElementById("e2PhaseOffset").value * Math.PI
 
         device.queue.writeBuffer(uniformsBuffer, 0, uniformsValues)
 
@@ -206,7 +255,8 @@ main()
 
 TODO:
 
-control everything about the emitters
+add icons for where the speakers are
+add a microphone that you can actually hear from
 add option to see waves or sound intensity
 add option to have amplitude drop off with distance
 

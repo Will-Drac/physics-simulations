@@ -1,5 +1,7 @@
 export default /*wgsl*/ `
 
+const canvasSize = _CANVASSIZE;
+
 struct emitter {
     pos: vec2f,
     phaseOffset: f32,
@@ -19,6 +21,7 @@ struct uniforms {
     e2Frequency: f32,
 
     time: f32,
+    canvasWidth: f32
 }
 
 const PI = 3.14159265358979;
@@ -31,17 +34,22 @@ const PI = 3.14159265358979;
 ) {
     let i = vec2f(id.xy);
 
-    let d1 = distance(i, u.e1Pos);
-    let d2 = distance(i, u.e2Pos);
+    let d1 = distance(i, u.e1Pos)*(u.canvasWidth/f32(canvasSize.x));
+    let d2 = distance(i, u.e2Pos)*(u.canvasWidth/f32(canvasSize.x));
 
     let theta1 = 2*PI*u.e1Frequency*d1/343 - 2*PI*u.e1Frequency*u.time + u.e1PhaseOffset;
     let theta2 = 2*PI*u.e2Frequency*d2/343 - 2*PI*u.e2Frequency*u.time + u.e2PhaseOffset;
 
     textureStore(outputTexture, id.xy, vec4f(
-        sin(theta1)/(d1*d1) + sin(theta2)/(d2*d2), //real component of the wave
-        cos(theta1)/(d1*d1) + cos(theta2)/(d2*d2), //imaginary component of the wave,
+        u.e1Amplitude*sin(theta1) + u.e2Amplitude*sin(theta2), //real component of the wave
+        u.e1Amplitude*cos(theta1) + u.e2Amplitude*cos(theta2), //imaginary component of the wave,
         0, 0
     ));
+    // textureStore(outputTexture, id.xy, vec4f(
+    //     sin(theta1)/(d1*d1) + sin(theta2)/(d2*d2), //real component of the wave
+    //     cos(theta1)/(d1*d1) + cos(theta2)/(d2*d2), //imaginary component of the wave,
+    //     0, 0
+    // ));
 }
 
 `
