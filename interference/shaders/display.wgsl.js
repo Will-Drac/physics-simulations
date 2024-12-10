@@ -10,7 +10,7 @@ export default /*wgsl*/ `
 
     let v = textureLoad(waveTexture, i, 0).xy;
 
-    textureStore(displayTexture, i, 0.5*vec4f(v.x, -v.x, 0, 0));
+    textureStore(displayTexture, i, 0.5*vec4f(v.y, -v.y, 0, 0));
 
     // textureStore(displayTexture, i, 0.5*vec4f(v.x*v.x+v.y*v.y));
 }

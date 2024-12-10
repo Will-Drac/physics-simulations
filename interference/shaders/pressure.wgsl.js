@@ -2,13 +2,6 @@ export default /*wgsl*/ `
 
 const canvasSize = _CANVASSIZE;
 
-struct emitter {
-    pos: vec2f,
-    phaseOffset: f32,
-    amplitude: f32,
-    frequency: f32
-}
-
 struct uniforms {
     e1Pos: vec2f,
     e1PhaseOffset: f32,

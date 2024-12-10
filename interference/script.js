@@ -1,6 +1,11 @@
-import updateCode from "./shaders/update.wgsl.js"
+import pressureCode from "./shaders/pressure.wgsl.js"
+import displaceCode from "./shaders/displace.wgsl.js"
+import clearCode from "./shaders/clear.wgsl.js"
+import drawPointsCode from "./shaders/drawPoints.wgsl.js"
 import displayCode from "./shaders/display.wgsl.js"
 import renderCode from "./shaders/render.wgsl.js"
+
+const numPointsSqrt = 300
 
 function clamp(v, min, max) {
     return Math.min(Math.max(v, min), max)
@@ -65,23 +70,22 @@ async function main() {
 
 
 
-    const waveTexture = device.createTexture({
+    const pressureTexture = device.createTexture({
         label: "texture holding the real and imaginary components of the waves",
         format: "rg32float",
         size: [canvas.clientWidth, canvas.clientHeight],
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
     })
 
-
-    const updateModule = device.createShaderModule({
+    const pressureModule = device.createShaderModule({
         label: "module to update the wave",
-        code: updateCode.replace("_CANVASSIZE", `vec2u(${canvas.clientWidth}, ${canvas.clientHeight})`)
+        code: pressureCode.replace("_CANVASSIZE", `vec2u(${canvas.clientWidth}, ${canvas.clientHeight})`)
     })
 
-    const updatePipeline = device.createComputePipeline({
+    const pressurePipeline = device.createComputePipeline({
         layout: "auto",
         compute: {
-            module: updateModule
+            module: pressureModule
         }
     })
 
@@ -103,12 +107,106 @@ async function main() {
         canvasWidth: new Float32Array(uniformsValues, 48, 1),
     }
 
-    const updateBindGroup = device.createBindGroup({
+    const pressureBindGroup = device.createBindGroup({
         label: "h",
-        layout: updatePipeline.getBindGroupLayout(0),
+        layout: pressurePipeline.getBindGroupLayout(0),
         entries: [
             { binding: 0, resource: { buffer: uniformsBuffer } },
-            { binding: 1, resource: waveTexture.createView() }
+            { binding: 1, resource: pressureTexture.createView() }
+        ]
+    })
+
+
+
+    let pointsOrigins = []
+    for (let i = 0; i < numPointsSqrt**2; i++) {
+        pointsOrigins.push(
+            Math.random() * canvas.clientWidth,
+            Math.random() * canvas.clientHeight
+        )
+    }
+    const pointsOriginsArray = new Float32Array(pointsOrigins)
+    const pointsOriginsBuffer = device.createBuffer({
+        label: "buffer containing the origins of the wiggling points",
+        size: pointsOriginsArray.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+    })
+    device.queue.writeBuffer(pointsOriginsBuffer, 0, pointsOriginsArray)
+
+    const pointsBuffer = device.createBuffer({
+        label: "buffer containing the current location of the points",
+        size: pointsOriginsArray.byteLength,
+        usage: GPUBufferUsage.STORAGE
+    })
+
+    const displaceModule = device.createShaderModule({
+        label: "shader module displacing points depending on the speakers",
+        code: displaceCode
+            .replace("_CANVASSIZE", `vec2u(${canvas.clientWidth}, ${canvas.clientHeight})`)
+            .replace("_NUMPOINTSSQRT", numPointsSqrt)
+    })
+
+    const displacePipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: {
+            module: displaceModule
+        }
+    })
+
+    const displaceBindGroup = device.createBindGroup({
+        layout: displacePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: pointsOriginsBuffer } },
+            { binding: 1, resource: { buffer: uniformsBuffer } },
+            { binding: 2, resource: { buffer: pointsBuffer } }
+        ]
+    })
+
+
+
+    const drawPointsTexture = device.createTexture({
+        format: "rgba8unorm",
+        size: [canvas.clientWidth, canvas.clientHeight],
+        usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
+    })
+
+    const clearModule = device.createShaderModule({
+        label: "module to clear a texture",
+        code: clearCode
+    })
+
+    const clearPipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: {
+            module: clearModule
+        }
+    })
+
+    const clearBindGroup = device.createBindGroup({
+        layout: clearPipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: drawPointsTexture.createView() }
+        ]
+    })
+
+
+
+    const drawPointsModule = device.createShaderModule({
+        code: drawPointsCode.replace("_NUMPOINTSSQRT", numPointsSqrt)
+    })
+
+    const drawPointsPipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: {
+            module: drawPointsModule
+        }
+    })
+
+    const drawPointsBindGroup = device.createBindGroup({
+        layout: drawPointsPipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: pointsBuffer } },
+            { binding: 1, resource: drawPointsTexture.createView() }
         ]
     })
 
@@ -134,7 +232,7 @@ async function main() {
     const displayBindGroup = device.createBindGroup({
         layout: displayPipeline.getBindGroupLayout(0),
         entries: [
-            { binding: 0, resource: waveTexture.createView() },
+            { binding: 0, resource: pressureTexture.createView() },
             { binding: 1, resource: displayTexture.createView() }
         ]
     })
@@ -167,7 +265,8 @@ async function main() {
         layout: renderPipeline.getBindGroupLayout(0),
         entries: [
             { binding: 0, resource: displayTexture.createView() },
-            { binding: 1, resource: linearSampler }
+            { binding: 1, resource: drawPointsTexture.createView() },
+            { binding: 2, resource: linearSampler }
         ]
     })
 
@@ -189,15 +288,19 @@ async function main() {
         const widthScale = document.getElementById("widthScale").value
         uniformsViews.canvasWidth[0] = widthScale
 
-        document.getElementById("e1PosDisplay").innerText = `(${(e1Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale-e1Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
+        // const amplitude = 343 / (Number(document.getElementById("e1Frequency").value) + Number(document.getElementById("e2Frequency").value)) / 2
+
+        document.getElementById("e1PosDisplay").innerText = `(${(e1Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale - e1Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
         uniformsViews.e1Pos[0] = e1Pos.x; uniformsViews.e1Pos[1] = e1Pos.y
         uniformsViews.e1Amplitude[0] = document.getElementById("e1Amplitude").value
+        // uniformsViews.e1Amplitude[0] = amplitude
         uniformsViews.e1Frequency[0] = document.getElementById("e1Frequency").value
         uniformsViews.e1PhaseOffset[0] = document.getElementById("e1PhaseOffset").value * Math.PI
 
-        document.getElementById("e2PosDisplay").innerText = `(${(e2Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale-e2Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
+        document.getElementById("e2PosDisplay").innerText = `(${(e2Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale - e2Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
         uniformsViews.e2Pos[0] = e2Pos.x; uniformsViews.e2Pos[1] = e2Pos.y
         uniformsViews.e2Amplitude[0] = document.getElementById("e2Amplitude").value
+        // uniformsViews.e2Amplitude[0] = amplitude
         uniformsViews.e2Frequency[0] = document.getElementById("e2Frequency").value
         uniformsViews.e2PhaseOffset[0] = document.getElementById("e2PhaseOffset").value * Math.PI
 
@@ -205,15 +308,51 @@ async function main() {
 
 
 
-        const updateEncoder = device.createCommandEncoder()
-        const updatePass = updateEncoder.beginComputePass()
-        updatePass.setPipeline(updatePipeline)
-        updatePass.setBindGroup(0, updateBindGroup)
-        updatePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
-        updatePass.end()
+        const pressureEncoder = device.createCommandEncoder()
+        const pressurePass = pressureEncoder.beginComputePass()
+        pressurePass.setPipeline(pressurePipeline)
+        pressurePass.setBindGroup(0, pressureBindGroup)
+        pressurePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+        pressurePass.end()
 
-        const updateCommandBuffer = updateEncoder.finish()
-        device.queue.submit([updateCommandBuffer])
+        const pressureCommandBuffer = pressureEncoder.finish()
+        device.queue.submit([pressureCommandBuffer])
+
+
+
+        const displaceEncoder = device.createCommandEncoder()
+        const displacePass = displaceEncoder.beginComputePass()
+        displacePass.setPipeline(displacePipeline)
+        displacePass.setBindGroup(0, displaceBindGroup)
+        displacePass.dispatchWorkgroups(numPointsSqrt, numPointsSqrt)
+        displacePass.end()
+
+        const displaceCommandBuffer = displaceEncoder.finish()
+        device.queue.submit([displaceCommandBuffer])
+
+
+
+        const clearEncoder = device.createCommandEncoder()
+        const clearPass = clearEncoder.beginComputePass()
+        clearPass.setPipeline(clearPipeline)
+        clearPass.setBindGroup(0, clearBindGroup)
+        clearPass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+        clearPass.end()
+
+        const clearCommandBuffer = clearEncoder.finish()
+        device.queue.submit([clearCommandBuffer])
+
+
+
+        const drawPointsEncoder = device.createCommandEncoder()
+        const drawPointsPass = drawPointsEncoder.beginComputePass()
+        drawPointsPass.setPipeline(drawPointsPipeline)
+        drawPointsPass.setBindGroup(0, drawPointsBindGroup)
+        drawPointsPass.dispatchWorkgroups(numPointsSqrt, numPointsSqrt)
+        drawPointsPass.end()
+
+        const drawPointsCommandBuffer = drawPointsEncoder.finish()
+        device.queue.submit([drawPointsCommandBuffer])
 
 
 
