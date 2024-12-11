@@ -27,12 +27,21 @@ struct vertexShaderOutput {
     return output;
 };
 
-@group(0) @binding(0) var displayTexture: texture_2d<f32>;
+@group(0) @binding(0) var pressureTexture: texture_2d<f32>;
 @group(0) @binding(1) var drawPointsTexture: texture_2d<f32>;
-@group(0) @binding(2) var linearSampler: sampler;
+@group(0) @binding(2) var iconsTexture: texture_2d<f32>;
+@group(0) @binding(3) var linearSampler: sampler;
+
+fn alphaMix(colTop: vec4f, colBottom: vec4f) -> vec4f {
+    return colTop.a * colTop + (1-colTop.a) * colBottom;
+}
 
 @fragment fn render(i: vertexShaderOutput) -> @location(0) vec4f {
-    return textureSample(displayTexture, linearSampler, i.uv) + 0.5*textureSample(drawPointsTexture, linearSampler, i.uv);
+    let pressure = textureSample(pressureTexture, linearSampler, i.uv);
+    let particles = textureSample(drawPointsTexture, linearSampler, i.uv);
+    let icons = textureSample(iconsTexture, linearSampler, i.uv);
+
+    return alphaMix(icons, alphaMix(particles, pressure));
 }
 
 `

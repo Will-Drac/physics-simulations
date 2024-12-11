@@ -5,7 +5,8 @@ import drawPointsCode from "./shaders/drawPoints.wgsl.js"
 import displayCode from "./shaders/display.wgsl.js"
 import renderCode from "./shaders/render.wgsl.js"
 
-const numPointsSqrt = 300
+const numPointsSqrt = 350
+const iconSize = 40
 
 function clamp(v, min, max) {
     return Math.min(Math.max(v, min), max)
@@ -29,6 +30,14 @@ async function main() {
     })
 
 
+
+    const iconsCanvas = new OffscreenCanvas(canvas.clientWidth, canvas.clientHeight)
+    const iCtx = iconsCanvas.getContext("2d")
+    const speakerImg = new Image()
+    speakerImg.src = "icons/speaker.png"
+
+
+
     let e1Pos = { x: 100, y: 100, grabbed: false }
     let e2Pos = { x: 400, y: 400, grabbed: false }
     let cursor = { x: 0, y: 0 }
@@ -49,10 +58,10 @@ async function main() {
         }
     })
     document.addEventListener("mousedown", function (e) {
-        if ((cursor.x - e1Pos.x) ** 2 + (cursor.y - e1Pos.y) ** 2 < 20 ** 2) {
+        if ((cursor.x - e1Pos.x) ** 2 + (cursor.y - e1Pos.y) ** 2 < (iconSize/2) ** 2) {
             e1Pos.grabbed = true
         }
-        else if ((cursor.x - e2Pos.x) ** 2 + (cursor.y - e2Pos.y) ** 2 < 20 ** 2) {
+        else if ((cursor.x - e2Pos.x) ** 2 + (cursor.y - e2Pos.y) ** 2 < (iconSize/2) ** 2) {
             e2Pos.grabbed = true
         }
     })
@@ -62,11 +71,30 @@ async function main() {
     })
 
 
+
     const linearSampler = device.createSampler({
         magFilter: "linear",
         minFilter: "linear",
         mipmapFilter: "linear"
     })
+
+
+
+    const iconsTexture = device.createTexture({
+        label: "texture with the icons in the right spots",
+        format: "rgba8unorm",
+        size: [canvas.clientWidth, canvas.clientHeight],
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST
+    })
+
+    function updateIconsTexture() {
+        const bitmap = iconsCanvas.transferToImageBitmap()
+        device.queue.copyExternalImageToTexture(
+            { source: bitmap },
+            { texture: iconsTexture },
+            [canvas.clientWidth, canvas.clientHeight]
+        )
+    }
 
 
 
@@ -119,7 +147,7 @@ async function main() {
 
 
     let pointsOrigins = []
-    for (let i = 0; i < numPointsSqrt**2; i++) {
+    for (let i = 0; i < numPointsSqrt ** 2; i++) {
         pointsOrigins.push(
             Math.random() * canvas.clientWidth,
             Math.random() * canvas.clientHeight
@@ -266,7 +294,8 @@ async function main() {
         entries: [
             { binding: 0, resource: displayTexture.createView() },
             { binding: 1, resource: drawPointsTexture.createView() },
-            { binding: 2, resource: linearSampler }
+            { binding: 2, resource: iconsTexture.createView() },
+            { binding: 3, resource: linearSampler }
         ]
     })
 
@@ -278,6 +307,11 @@ async function main() {
 
         const dt = time / 1000 - timeOld
         timeOld = time / 1000
+
+        iCtx.clearRect(0, 0, iconsCanvas.clientWidth, iconsCanvas.clientWidth)
+        iCtx.drawImage(speakerImg, e1Pos.x - iconSize / 2, e1Pos.y - iconSize / 2, iconSize, iconSize)
+        iCtx.drawImage(speakerImg, e2Pos.x - iconSize / 2, e2Pos.y - iconSize / 2, iconSize, iconSize)
+        updateIconsTexture()
 
         const timeScale = (document.getElementById("timeScale").value) ** 5
         document.getElementById("timeScaleDisplay").innerText = timeScale.toFixed(3) + "x real time"

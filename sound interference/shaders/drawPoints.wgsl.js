@@ -12,7 +12,7 @@ const numPointsSqrt = _NUMPOINTSSQRT;
 
     let thisPoint = points[i];
 
-    textureStore(drawPointsTexture, vec2u(thisPoint), vec4f(1));
+    textureStore(drawPointsTexture, vec2u(thisPoint), vec4f(1, 1, 1, 1));
 }
 
 `
