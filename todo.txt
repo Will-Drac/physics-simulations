@@ -3,7 +3,8 @@ pick a consistent style for all simulations
 absorption in the light wave simulation finally
 
 New ideas:
-    wave on a spring, with connected springs of different spring constant POLISH THIS UP?
+    wave on a spring, with connected springs of different spring constant
+        WHY DOES IT WORK DIFFERENTLY ON MY SECOND MONITOR
 
     mechanics roller coaster OR mechanics sandbox
 
@@ -17,6 +18,7 @@ New ideas:
     small angle approximation vs real in pendulums
 
     sound interference: place sources and see how they interfere in 2d space
+        some things left to do
 
     doppler effect, seeing the waves spread (looking compressed in front and elongated behind), and actually hearing the sounds
 
