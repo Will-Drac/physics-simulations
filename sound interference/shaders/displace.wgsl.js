@@ -42,8 +42,8 @@ const PI = 3.14159265358979;
     let theta1 = 2*PI*u.e1Frequency*d1/343 - 2*PI*u.e1Frequency*u.time + u.e1PhaseOffset;
     let theta2 = 2*PI*u.e2Frequency*d2/343 - 2*PI*u.e2Frequency*u.time + u.e2PhaseOffset;
 
-    let displacement1 = u.e1Amplitude / s * dir1 * u.e1Amplitude * sin(theta1);
-    let displacement2 = u.e2Amplitude / s * dir2 * u.e2Amplitude * sin(theta2);
+    let displacement1 = u.e1Amplitude / s * dir1 * u.e1Amplitude * sin(theta1+3*PI/2);
+    let displacement2 = u.e2Amplitude / s * dir2 * u.e2Amplitude * sin(theta2+3*PI/2);
 
     positions[i] = origin + displacement1 + displacement2;
 }
