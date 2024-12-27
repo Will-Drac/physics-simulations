@@ -1,8 +1,38 @@
-html, body {
-  margin: 0;
-  padding: 0;
+body {
+    background-color: rgb(8, 19, 22);
+    color: aqua;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: large;
+}
+
+a {
+    color: rgb(255, 96, 255);
+}
+
+img,
+video {
+    width: 90%;
+    border-radius: 20px;
+    display: block;
+    margin: 10;
+    outline: solid;
 }
 
 canvas {
-  display: block;
+    display: inline-block !important;
+    margin: 20px;
+    outline: rgb(146, 255, 255);
+    outline-style: solid;
+    outline-width: 5px;
+    border-radius: 5px;
+}
+
+pre {
+    background-color: rgb(0 3 4);
+    border-radius: 21px;
+    padding: 10px;
+    margin-left: 65px;
+    margin-right: 65px;
+    color: #9efffa;
+    font-family: monospace;
 }
