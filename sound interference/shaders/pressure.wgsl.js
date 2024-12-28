@@ -34,8 +34,8 @@ const PI = 3.14159265358979;
     let theta2 = 2*PI*u.e2Frequency*d2/343 - 2*PI*u.e2Frequency*u.time + u.e2PhaseOffset;
 
     textureStore(outputTexture, id.xy, vec4f(
-        u.e1Amplitude*sin(theta1) + u.e2Amplitude*sin(theta2), //real component of the wave
-        u.e1Amplitude*cos(theta1) + u.e2Amplitude*cos(theta2), //imaginary component of the wave,
+        0.5*(sin(theta1) + sin(theta2)), //real component of the wave
+        0.5*(cos(theta1) + cos(theta2)), //imaginary component of the wave
         0, 0
     ));
     // textureStore(outputTexture, id.xy, vec4f(

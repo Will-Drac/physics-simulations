@@ -2,7 +2,8 @@ import pressureCode from "./shaders/pressure.wgsl.js"
 import displaceCode from "./shaders/displace.wgsl.js"
 import clearCode from "./shaders/clear.wgsl.js"
 import drawPointsCode from "./shaders/drawPoints.wgsl.js"
-import displayCode from "./shaders/display.wgsl.js"
+import intensityCode from "./shaders/intensity.wgsl.js"
+import displayWaveCode from "./shaders/displayWave.wgsl.js"
 import renderCode from "./shaders/render.wgsl.js"
 
 const numPointsSqrt = 350
@@ -35,11 +36,14 @@ async function main() {
     const iCtx = iconsCanvas.getContext("2d")
     const speakerImg = new Image()
     speakerImg.src = "icons/speaker.png"
+    const microphoneImg = new Image()
+    microphoneImg.src = "icons/microphone.png"
 
 
 
     let e1Pos = { x: 100, y: 100, grabbed: false }
     let e2Pos = { x: 400, y: 400, grabbed: false }
+    let mPos = { x: 390, y: 600, grabbed: false }
     let cursor = { x: 0, y: 0 }
     document.addEventListener("mousemove", function (e) {
         const canvasBounds = canvas.getBoundingClientRect()
@@ -52,22 +56,30 @@ async function main() {
             e1Pos.x = clamp(cursor.x, 0, canvas.clientWidth)
             e1Pos.y = clamp(cursor.y, 0, canvas.clientHeight)
         }
-        else if (e2Pos.grabbed) {
+        if (e2Pos.grabbed) {
             e2Pos.x = clamp(cursor.x, 0, canvas.clientWidth)
             e2Pos.y = clamp(cursor.y, 0, canvas.clientHeight)
         }
+        else if (mPos.grabbed) {
+            mPos.x = clamp(cursor.x, 0, canvas.clientWidth)
+            mPos.y = clamp(cursor.y, 0, canvas.clientHeight)
+        }
     })
     document.addEventListener("mousedown", function (e) {
-        if ((cursor.x - e1Pos.x) ** 2 + (cursor.y - e1Pos.y) ** 2 < (iconSize/2) ** 2) {
+        if ((cursor.x - e1Pos.x) ** 2 + (cursor.y - e1Pos.y) ** 2 < (iconSize / 2) ** 2) {
             e1Pos.grabbed = true
         }
-        else if ((cursor.x - e2Pos.x) ** 2 + (cursor.y - e2Pos.y) ** 2 < (iconSize/2) ** 2) {
+        if ((cursor.x - e2Pos.x) ** 2 + (cursor.y - e2Pos.y) ** 2 < (iconSize / 2) ** 2) {
             e2Pos.grabbed = true
+        }
+        else if ((cursor.x - mPos.x) ** 2 + (cursor.y - mPos.y) ** 2 < (iconSize / 2) ** 2) {
+            mPos.grabbed = true
         }
     })
     document.addEventListener("mouseup", function (e) {
         e1Pos.grabbed = false
         e2Pos.grabbed = false
+        mPos.grabbed = false
     })
 
 
@@ -240,9 +252,37 @@ async function main() {
 
 
 
+    //* i'm not going to bother saving the intensity as a texture of floats, this will just get a display texture
+    const intensityModule = device.createShaderModule({
+        label: "module to get the intensity of the wave",
+        code: intensityCode
+    })
+
+    const intensityPipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: { module: intensityModule }
+    })
+
+    const intensityTexture = device.createTexture({
+        label: "texture for displaying the sound intensity",
+        format: "rgba8unorm", //note: this isn't storing intensity values, it's a display texture
+        size: [canvas.clientWidth, canvas.clientHeight],
+        usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
+    })
+
+    const intensityBindGroup = device.createBindGroup({
+        layout: intensityPipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: pressureTexture.createView() },
+            { binding: 1, resource: intensityTexture.createView() }
+        ]
+    })
+
+
+
     const displayModule = device.createShaderModule({
         label: "module to turn the wave information into an image",
-        code: displayCode
+        code: displayWaveCode
     })
 
     const displayPipeline = device.createComputePipeline({
@@ -266,6 +306,15 @@ async function main() {
     })
 
 
+
+    const renderUniformsBuffer = device.createBuffer({
+        size: 4,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+    const renderUniformsValues = new ArrayBuffer(4)
+    const renderUniformsViews = {
+        renderMode: new Int32Array(renderUniformsValues),
+    }
 
     const renderModule = device.createShaderModule({
         label: "module to render the wave",
@@ -294,8 +343,10 @@ async function main() {
         entries: [
             { binding: 0, resource: displayTexture.createView() },
             { binding: 1, resource: drawPointsTexture.createView() },
-            { binding: 2, resource: iconsTexture.createView() },
-            { binding: 3, resource: linearSampler }
+            { binding: 2, resource: intensityTexture.createView() },
+            { binding: 3, resource: iconsTexture.createView() },
+            { binding: 4, resource: linearSampler },
+            { binding: 5, resource: { buffer: renderUniformsBuffer } }
         ]
     })
 
@@ -308,10 +359,21 @@ async function main() {
         const dt = time / 1000 - timeOld
         timeOld = time / 1000
 
+
+
+        //* drawing the icons
         iCtx.clearRect(0, 0, iconsCanvas.clientWidth, iconsCanvas.clientWidth)
         iCtx.drawImage(speakerImg, e1Pos.x - iconSize / 2, e1Pos.y - iconSize / 2, iconSize, iconSize)
         iCtx.drawImage(speakerImg, e2Pos.x - iconSize / 2, e2Pos.y - iconSize / 2, iconSize, iconSize)
+        iCtx.drawImage(microphoneImg, mPos.x-iconSize/2, mPos.y-iconSize/2, iconSize, iconSize)
         updateIconsTexture()
+
+
+
+        // getting the amplitude of the sound to play
+        
+
+
 
         const timeScale = (document.getElementById("timeScale").value) ** 5
         document.getElementById("timeScaleDisplay").innerText = timeScale.toFixed(3) + "x real time"
@@ -322,19 +384,21 @@ async function main() {
         const widthScale = document.getElementById("widthScale").value
         uniformsViews.canvasWidth[0] = widthScale
 
-        // const amplitude = 343 / (Number(document.getElementById("e1Frequency").value) + Number(document.getElementById("e2Frequency").value)) / 2
+        // const amplitude = 343 / ((Number(document.getElementById("e1Frequency").value) + Number(document.getElementById("e2Frequency").value))/2 * 6)
+        const avgFreq = (Number(document.getElementById("e1Frequency").value) + Number(document.getElementById("e2Frequency").value)) / 2
+        const amplitude = 1 / (0.028 * avgFreq) + 0.2
 
         document.getElementById("e1PosDisplay").innerText = `(${(e1Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale - e1Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
         uniformsViews.e1Pos[0] = e1Pos.x; uniformsViews.e1Pos[1] = e1Pos.y
-        uniformsViews.e1Amplitude[0] = document.getElementById("e1Amplitude").value
-        // uniformsViews.e1Amplitude[0] = amplitude
+        // uniformsViews.e1Amplitude[0] = document.getElementById("e1Amplitude").value
+        uniformsViews.e1Amplitude[0] = amplitude
         uniformsViews.e1Frequency[0] = document.getElementById("e1Frequency").value
         uniformsViews.e1PhaseOffset[0] = document.getElementById("e1PhaseOffset").value * Math.PI
 
         document.getElementById("e2PosDisplay").innerText = `(${(e2Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale - e2Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
         uniformsViews.e2Pos[0] = e2Pos.x; uniformsViews.e2Pos[1] = e2Pos.y
-        uniformsViews.e2Amplitude[0] = document.getElementById("e2Amplitude").value
-        // uniformsViews.e2Amplitude[0] = amplitude
+        // uniformsViews.e2Amplitude[0] = document.getElementById("e2Amplitude").value
+        uniformsViews.e2Amplitude[0] = amplitude
         uniformsViews.e2Frequency[0] = document.getElementById("e2Frequency").value
         uniformsViews.e2PhaseOffset[0] = document.getElementById("e2PhaseOffset").value * Math.PI
 
@@ -390,6 +454,18 @@ async function main() {
 
 
 
+        const intensityEncoder = device.createCommandEncoder()
+        const intensityPass = intensityEncoder.beginComputePass()
+        intensityPass.setPipeline(intensityPipeline)
+        intensityPass.setBindGroup(0, intensityBindGroup)
+        intensityPass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+        intensityPass.end()
+
+        const intensityCommandBuffer = intensityEncoder.finish()
+        device.queue.submit([intensityCommandBuffer])
+
+
+
         const displayEncoder = device.createCommandEncoder()
         const displayPass = displayEncoder.beginComputePass()
         displayPass.setPipeline(displayPipeline)
@@ -402,7 +478,17 @@ async function main() {
 
 
 
+        const renderModes = {
+            pressure: 0,
+            particles: 1,
+            pressureAndParticles: 2,
+            soundIntensity: 3
+        }
+
         renderPassDescriptor.colorAttachments[0].view = context.getCurrentTexture().createView()
+
+        renderUniformsViews.renderMode[0] = renderModes[document.getElementById("displaySelect").value]
+        device.queue.writeBuffer(renderUniformsBuffer, 0, renderUniformsValues)
 
         const renderEncoder = device.createCommandEncoder()
         const renderPass = renderEncoder.beginRenderPass(renderPassDescriptor)
@@ -428,9 +514,7 @@ main()
 
 TODO:
 
-add icons for where the speakers are
 add a microphone that you can actually hear from
-add option to see waves or sound intensity
 add option to have amplitude drop off with distance
-
+have option to see the effect of an individual speaker?
 */
