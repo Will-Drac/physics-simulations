@@ -31,7 +31,7 @@ const pointSpacing = _POINTSPACING;
         if (f32(i)/f32(numPoints) > u.transition) {m = u.massPerLength2;}
 
         // update the wave according to the equation
-        pointsOld[i] = clamp((u.tension/m)*(0.016/pointSpacing)*(points[i-1]-2*points[i]+points[i+1]), -5, 5)+2*points[i]-pointsOld[i];
+        pointsOld[i] = clamp((u.tension/m)*(0.0016/pointSpacing)*(points[i-1]-2*points[i]+points[i+1]), -5, 5)+2*points[i]-pointsOld[i];
 
         pointsOld[i] = clamp(pointsOld[i], -300, 300);
     }

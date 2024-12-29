@@ -1,4 +1,4 @@
-const numPoints = 400
+const numPoints = 800
 const padding = 30
 
 import clearCode from "./shaders/clear.wgsl.js"
@@ -216,9 +216,6 @@ async function main() {
     function render(time) {
         if (shouldStop) { main(); return }
 
-        iterations++
-
-        pulseTime += 0.016
 
         const clearEncoder = device.createCommandEncoder()
         const clearPass = clearEncoder.beginComputePass()
@@ -232,32 +229,40 @@ async function main() {
 
 
 
-        waveUniformsViews.startValue[0] = mouseDown ? cursor.y - canvas.clientHeight / 2 : 120 * Math.sin(2 * Math.PI * Math.min(pulseTime, 1))
-        waveUniformsViews.tension[0] = 100
+
+        waveUniformsViews.tension[0] = 10
         waveUniformsViews.massPerLength1[0] = document.getElementById("spring1MassDisplay").innerText = document.getElementById("spring1Mass").value
         waveUniformsViews.massPerLength2[0] = document.getElementById("spring2MassDisplay").innerText = document.getElementById("spring2Mass").value
         waveUniformsViews.transition[0] = document.getElementById("transitionDisplay").innerText = document.getElementById("transition").value
         device.queue.writeBuffer(waveUniformsBuffer, 0, waveUniformsValues)
 
-        const updateBindGroup = device.createBindGroup({
-            label: "updating spring bind group",
-            layout: updatePipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: pointsBuffers[iterations % 2] } }, //the current one to update
-                { binding: 1, resource: { buffer: pointsBuffers[(iterations + 1) % 2] } }, //the last one, information needed for the new update
-                { binding: 2, resource: { buffer: waveUniformsBuffer } }
-            ]
-        })
+        for (let i = 0; i < 10; i++) {
 
-        const updateEncoder = device.createCommandEncoder()
-        const updatePass = updateEncoder.beginComputePass()
-        updatePass.setPipeline(updatePipeline)
-        updatePass.setBindGroup(0, updateBindGroup)
-        updatePass.dispatchWorkgroups(numPoints)
-        updatePass.end()
+            pulseTime += 0.0016
+            waveUniformsViews.startValue[0] = mouseDown ? cursor.y - canvas.clientHeight / 2 : 120 * Math.sin(2 * Math.PI * Math.min(pulseTime, 1))
 
-        const updateCommandBuffer = updateEncoder.finish()
-        device.queue.submit([updateCommandBuffer])
+            iterations++
+
+            const updateBindGroup = device.createBindGroup({
+                label: "updating spring bind group",
+                layout: updatePipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: { buffer: pointsBuffers[iterations % 2] } }, //the current one to update
+                    { binding: 1, resource: { buffer: pointsBuffers[(iterations + 1) % 2] } }, //the last one, information needed for the new update
+                    { binding: 2, resource: { buffer: waveUniformsBuffer } }
+                ]
+            })
+
+            const updateEncoder = device.createCommandEncoder()
+            const updatePass = updateEncoder.beginComputePass()
+            updatePass.setPipeline(updatePipeline)
+            updatePass.setBindGroup(0, updateBindGroup)
+            updatePass.dispatchWorkgroups(numPoints)
+            updatePass.end()
+
+            const updateCommandBuffer = updateEncoder.finish()
+            device.queue.submit([updateCommandBuffer])
+        }
 
 
 
