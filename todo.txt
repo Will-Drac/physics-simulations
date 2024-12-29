@@ -6,7 +6,7 @@ New ideas:
     wave on a spring, with connected springs of different spring constant
         WHY DOES IT WORK DIFFERENTLY ON MY SECOND MONITOR
 
-    mechanics roller coaster OR mechanics sandbox
+    mechanics roller coaster OR mechanics sandbox <- cooler i think
 
     nuclear physics stuff (not exactly sure what)
 
@@ -17,13 +17,12 @@ New ideas:
 
     small angle approximation vs real in pendulums
 
-    sound interference: place sources and see how they interfere in 2d space
-        some things left to do
-
     doppler effect, seeing the waves spread (looking compressed in front and elongated behind), and actually hearing the sounds
 
     beats but you can see the graph and hear them
 
     thin films, somehow
 
-    capacitors, somehow
+    circuit simulation with capacitors where it shows you voltage and current and charge and all that
+
+    relativistic render engine
