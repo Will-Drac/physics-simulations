@@ -18,7 +18,6 @@ async function main() {
 
     const canvas = document.getElementById("display")
     const context = canvas.getContext("webgpu")
-    const canvasBounds = canvas.getBoundingClientRect()
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat()
     context.configure({
         device,
@@ -29,6 +28,7 @@ async function main() {
     let pulseTime = 1
     let cursor = { x: 0, y: 0 }
     document.addEventListener("mousemove", function (e) {
+        const canvasBounds = canvas.getBoundingClientRect()
         cursor = {
             x: e.clientX - canvasBounds.left,
             y: e.clientY - canvasBounds.top

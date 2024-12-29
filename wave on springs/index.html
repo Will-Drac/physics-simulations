@@ -11,13 +11,13 @@
 <body>
     <canvas id="display" width="1000" height="800"></canvas>
     <!-- I got frustrated that it wasnt taking scroll on the page into account when dragging the spring so i remove the possibility for scroll by putting everything fixed on the left side -->
-    <div style="width: 600px; position: fixed; right:60px; top:30px; background-color: rgb(0, 29, 29); padding: 30px; border-radius: 10px; outline: solid;">
+    <div class="optionsCategory">
         <span>Mass of First Spring: </span><input min="1" max="10" value="1" type="range" id="spring1Mass"><span id="spring1MassDisplay"></span>
         <br>
         <span>Mass of Second Spring: </span><input min="1" max="10" value="3" type="range" id="spring2Mass"><span id="spring2MassDisplay"></span>
         <br>
         <span>Transition Between Springs:</span><input min="0" max="1" step="0.01" type="range" value="0.5" id="transition"><span id="transitionDisplay"></span>
-        <br>
+        <br><br>
         <button id="pulseButton">Pulse</button>
         <button id="resetButton">Reset</button>
         <p>Click and drag on the canvas to move the leftmost part of the spring</p>
