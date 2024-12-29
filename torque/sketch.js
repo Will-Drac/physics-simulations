@@ -16,7 +16,7 @@ function setup() {
     createP("Length of bar:")
     lengthInput = createInput(length.toString());
     lengthInput.input(() => {
-        length = parseFloat(lengthInput.value()); //float makes sense right
+        length = parseFloat(lengthInput.value());
     });
     
     createP("Mass of bar:")
@@ -32,21 +32,26 @@ function setup() {
     });
 
     createP("Position of force on bar:");
-    forcePositionInput = createInput("100") //what
+    forcePositionInput = createInput("100") //change to whatever looks good
 
-    createP("Magnitude of force (y component)")
-    forceMagnitudeY = createInput("10") //also what
+    createP("Magnitude of force (y component)");
+    forceMagnitudeY = createInput("10") //change to whatever looks good
 
-   
+    addForceButton = createButton("Add force:");
+    addForceButton.mousepressed(() =>{
+        const forcePosition = parseFloat(forcePositionInput.value());
+        const forceMagnitude = parseFloat(forceMagnitudeInput.value());
+        forces.push([forcePosition, createVector(0, forceMagnitude)]);
+    });
 }
+
 
 let t = 0 //a variable to keep track of the time since the simulation started
 function draw() {
     background(51) //filling the background of the canvas with a solid color (i think this looks nice but you can do whatever with it)
     t += deltaTime / 1000 //p5 keeps track of deltaTime, which is the time between frames in milliseconds. adding this (converted to seconds) to our tally of the time keeps the time up to date
 
-    let barMomentOfInertia = (mass * length ** 2) / 3 //***assuming that I bar = 1/3mL^2?? but the pivot changes so doesnt that change mot as well???***
-
+    
     // between push and pop, you can do things like translate, rotate, and scale, so that when you draw something it would be affected by those transformations
     // i find it makes most sense to read them bottom to top
     push()
@@ -70,6 +75,15 @@ function sumTorque() {
         netTorque += T
 
     }
-
     return netTorque
 }
+
+
+function calculateMomentOfInertia(mass, length, pivotPosition) {
+    let density = mass / length
+    let I1 = (pivotPosition**3)/3
+    let I2 = ((length**3)/3) - (p*(length**2)) + ((p**2)*L) - ((p**3)/3) //not sure ab order of operations on this one (embarassing)
+    return density(I1 + I2)
+
+}
+    
