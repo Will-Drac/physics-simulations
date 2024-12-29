@@ -13,6 +13,27 @@ function clamp(v, min, max) {
     return Math.min(Math.max(v, min), max)
 }
 
+let audioContext, oscillator, audioGainNode
+let audioPlaying = false
+
+document.getElementById("audioStart").addEventListener("click", function () {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)()
+    oscillator = audioContext.createOscillator()
+    oscillator.type = "sine"
+    audioGainNode = audioContext.createGain()
+    oscillator.connect(audioGainNode)
+    audioGainNode.connect(audioContext.destination)
+    oscillator.start()
+
+    audioPlaying = true
+})
+
+document.getElementById("audioStop").addEventListener("click", function () {
+    if (oscillator) { oscillator.stop() }
+
+    audioPlaying = false
+})
+
 async function main() {
     // set up the device (gpu)
     const adapter = await navigator.gpu?.requestAdapter()
@@ -52,28 +73,28 @@ async function main() {
             y: e.clientY - canvasBounds.top
         }
 
-        if (e1Pos.grabbed) {
-            e1Pos.x = clamp(cursor.x, 0, canvas.clientWidth)
-            e1Pos.y = clamp(cursor.y, 0, canvas.clientHeight)
-        }
-        if (e2Pos.grabbed) {
-            e2Pos.x = clamp(cursor.x, 0, canvas.clientWidth)
-            e2Pos.y = clamp(cursor.y, 0, canvas.clientHeight)
-        }
-        else if (mPos.grabbed) {
+        if (mPos.grabbed) {
             mPos.x = clamp(cursor.x, 0, canvas.clientWidth)
             mPos.y = clamp(cursor.y, 0, canvas.clientHeight)
         }
+        else if (e2Pos.grabbed) {
+            e2Pos.x = clamp(cursor.x, 0, canvas.clientWidth)
+            e2Pos.y = clamp(cursor.y, 0, canvas.clientHeight)
+        }
+        else if (e1Pos.grabbed) {
+            e1Pos.x = clamp(cursor.x, 0, canvas.clientWidth)
+            e1Pos.y = clamp(cursor.y, 0, canvas.clientHeight)
+        }
     })
     document.addEventListener("mousedown", function (e) {
-        if ((cursor.x - e1Pos.x) ** 2 + (cursor.y - e1Pos.y) ** 2 < (iconSize / 2) ** 2) {
-            e1Pos.grabbed = true
+        if ((cursor.x - mPos.x) ** 2 + (cursor.y - mPos.y) ** 2 < (iconSize / 2) ** 2) {
+            mPos.grabbed = true
         }
-        if ((cursor.x - e2Pos.x) ** 2 + (cursor.y - e2Pos.y) ** 2 < (iconSize / 2) ** 2) {
+        else if ((cursor.x - e2Pos.x) ** 2 + (cursor.y - e2Pos.y) ** 2 < (iconSize / 2) ** 2) {
             e2Pos.grabbed = true
         }
-        else if ((cursor.x - mPos.x) ** 2 + (cursor.y - mPos.y) ** 2 < (iconSize / 2) ** 2) {
-            mPos.grabbed = true
+        else if ((cursor.x - e1Pos.x) ** 2 + (cursor.y - e1Pos.y) ** 2 < (iconSize / 2) ** 2) {
+            e1Pos.grabbed = true
         }
     })
     document.addEventListener("mouseup", function (e) {
@@ -365,13 +386,31 @@ async function main() {
         iCtx.clearRect(0, 0, iconsCanvas.clientWidth, iconsCanvas.clientWidth)
         iCtx.drawImage(speakerImg, e1Pos.x - iconSize / 2, e1Pos.y - iconSize / 2, iconSize, iconSize)
         iCtx.drawImage(speakerImg, e2Pos.x - iconSize / 2, e2Pos.y - iconSize / 2, iconSize, iconSize)
-        iCtx.drawImage(microphoneImg, mPos.x-iconSize/2, mPos.y-iconSize/2, iconSize, iconSize)
+        iCtx.drawImage(microphoneImg, mPos.x - iconSize / 2, mPos.y - iconSize / 2, iconSize, iconSize)
         updateIconsTexture()
 
 
 
-        // getting the amplitude of the sound to play
-        
+        const widthScale = document.getElementById("widthScale").value
+        const f1 = Number(document.getElementById("e1Frequency").value)
+        const f2 = Number(document.getElementById("e2Frequency").value)
+        const phi1 = document.getElementById("e1PhaseOffset").value * Math.PI
+        const phi2 = document.getElementById("e2PhaseOffset").value * Math.PI
+        document.getElementById("micPosDisplay").innerText = `(${(mPos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale - mPos.y * widthScale / canvas.clientHeight).toFixed(2)})`
+        if (audioPlaying) {
+            // getting the amplitude of the sound to play
+            const micDist1 = Math.sqrt((mPos.x - e1Pos.x) ** 2 + (mPos.y - e1Pos.y) ** 2) * (widthScale / canvas.clientWidth)
+            const micDist2 = Math.sqrt((mPos.x - e2Pos.x) ** 2 + (mPos.y - e2Pos.y) ** 2) * (widthScale / canvas.clientWidth)
+
+            const theta1 = 2 * Math.PI * f1 * micDist1 / 343 - 2 * Math.PI * f1 * t + phi1
+            const theta2 = 2 * Math.PI * f2 * micDist2 / 343 - 2 * Math.PI * f2 * t + phi2
+
+            const micAmplitude = Math.sqrt((0.5 * (Math.sin(theta1) + Math.sin(theta2))) ** 2 + (0.5 * (Math.cos(theta1) + Math.cos(theta2))) ** 2)
+
+            // playing it
+            oscillator.frequency.setValueAtTime(0.5 * (f1 + f2), audioContext.currentTime)
+            audioGainNode.gain.setValueAtTime(micAmplitude * document.getElementById("volumeInput").value, audioContext.currentTime)
+        }
 
 
 
@@ -379,28 +418,24 @@ async function main() {
         document.getElementById("timeScaleDisplay").innerText = timeScale.toFixed(3) + "x real time"
         t += timeScale * dt
 
-        uniformsViews.time[0] = t % 100
+        uniformsViews.time[0] = t % 1000
 
-        const widthScale = document.getElementById("widthScale").value
         uniformsViews.canvasWidth[0] = widthScale
 
-        // const amplitude = 343 / ((Number(document.getElementById("e1Frequency").value) + Number(document.getElementById("e2Frequency").value))/2 * 6)
-        const avgFreq = (Number(document.getElementById("e1Frequency").value) + Number(document.getElementById("e2Frequency").value)) / 2
+        const avgFreq = 0.5 * (f1 + f2)
         const amplitude = 1 / (0.028 * avgFreq) + 0.2
 
         document.getElementById("e1PosDisplay").innerText = `(${(e1Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale - e1Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
         uniformsViews.e1Pos[0] = e1Pos.x; uniformsViews.e1Pos[1] = e1Pos.y
-        // uniformsViews.e1Amplitude[0] = document.getElementById("e1Amplitude").value
         uniformsViews.e1Amplitude[0] = amplitude
-        uniformsViews.e1Frequency[0] = document.getElementById("e1Frequency").value
-        uniformsViews.e1PhaseOffset[0] = document.getElementById("e1PhaseOffset").value * Math.PI
+        uniformsViews.e1Frequency[0] = f1
+        uniformsViews.e1PhaseOffset[0] = phi1
 
         document.getElementById("e2PosDisplay").innerText = `(${(e2Pos.x * widthScale / canvas.clientWidth).toFixed(2)}, ${(widthScale - e2Pos.y * widthScale / canvas.clientHeight).toFixed(2)})`
         uniformsViews.e2Pos[0] = e2Pos.x; uniformsViews.e2Pos[1] = e2Pos.y
-        // uniformsViews.e2Amplitude[0] = document.getElementById("e2Amplitude").value
         uniformsViews.e2Amplitude[0] = amplitude
-        uniformsViews.e2Frequency[0] = document.getElementById("e2Frequency").value
-        uniformsViews.e2PhaseOffset[0] = document.getElementById("e2PhaseOffset").value * Math.PI
+        uniformsViews.e2Frequency[0] = f2
+        uniformsViews.e2PhaseOffset[0] = phi2
 
         device.queue.writeBuffer(uniformsBuffer, 0, uniformsValues)
 
@@ -509,12 +544,7 @@ async function main() {
 main()
 
 
-
 /*
-
-TODO:
-
-add a microphone that you can actually hear from
-add option to have amplitude drop off with distance
-have option to see the effect of an individual speaker?
+add option to have amplitude drop off with distance?
+add option to see the effect of an individual speaker?
 */

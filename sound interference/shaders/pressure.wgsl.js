@@ -38,9 +38,11 @@ const PI = 3.14159265358979;
         0.5*(cos(theta1) + cos(theta2)), //imaginary component of the wave
         0, 0
     ));
+
+    //*same as above but featuring a drop off of sound intensity with distance to the emitter
     // textureStore(outputTexture, id.xy, vec4f(
-    //     sin(theta1)/(d1*d1) + sin(theta2)/(d2*d2), //real component of the wave
-    //     cos(theta1)/(d1*d1) + cos(theta2)/(d2*d2), //imaginary component of the wave,
+    //     0.5*(sin(theta1)/(d1*d1) + sin(theta2)/(d2*d2)), //real component of the wave
+    //     0.5*(cos(theta1)/(d1*d1) + cos(theta2)/(d2*d2)), //imaginary component of the wave,
     //     0, 0
     // ));
 }
