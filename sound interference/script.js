@@ -17,6 +17,7 @@ let audioContext, oscillator, audioGainNode
 let audioPlaying = false
 
 document.getElementById("audioStart").addEventListener("click", function () {
+    if (audioPlaying) { return }
     audioContext = new (window.AudioContext || window.webkitAudioContext)()
     oscillator = audioContext.createOscillator()
     oscillator.type = "sine"
