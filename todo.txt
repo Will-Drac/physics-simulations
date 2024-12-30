@@ -1,11 +1,9 @@
 pick a consistent style for all simulations
+    make all simulations use the css file
 
 absorption in the light wave simulation finally
 
 New ideas:
-    wave on a spring, with connected springs of different spring constant
-        WHY DOES IT WORK DIFFERENTLY ON MY SECOND MONITOR
-
     mechanics roller coaster OR mechanics sandbox <- cooler i think
 
     nuclear physics stuff (not exactly sure what)
@@ -16,8 +14,6 @@ New ideas:
     induction things
 
     small angle approximation vs real in pendulums
-
-    doppler effect, seeing the waves spread (looking compressed in front and elongated behind), and actually hearing the sounds
 
     beats but you can see the graph and hear them
 
