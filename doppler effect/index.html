@@ -10,5 +10,16 @@
 </head>
 <body>
     <canvas id="displayCanvas" width="800" height="800"></canvas>
+
+    <div class="optionsCategory">
+        <h2 style="margin: 5px;">Microphone</h2>
+        <button id="audioStartButton">Start</button>
+        <button id="audioStopButton">Stop</button>
+        <br><br>
+        <span>Volume: </span>
+        <input id="volumeInput" type="range" value="1" min="0" max="1" step="0.01">
+        <br>
+        <input id="frequencyInput" type="number" value="220" min="20" max="2000"><span>Hz</span>
+    </div>
 </body>
 </html>

@@ -19,7 +19,7 @@ fn f(pos: vec4f, samplePos: vec2f) -> f32 {
 }
 
 fn wave(theta: f32) -> f32 {
-    return sin(15*theta);
+    return sin(2*3.141592*_FREQUENCY*theta);
 }
 
 fn mapRange(value: f32, inMin: f32, inMax: f32, outMin: f32, outMax: f32) -> f32 {
@@ -64,7 +64,7 @@ fn colorRamp5(value: f32, colors: array<RampColor, 5>) -> vec3f {
         let midTime = mapRange(1, fThis, fNext, vThis[2], vNext[2]);
         let waveValue = wave(midTime);
         let c = colorRamp5(
-            waveValue * 0.85,
+            waveValue*0.85,
             array(
                 RampColor(vec3f(0, 0, 0), -1),
                 RampColor(vec3f(0.35, 0, 0.6), -0.2),
@@ -75,18 +75,6 @@ fn colorRamp5(value: f32, colors: array<RampColor, 5>) -> vec3f {
         );
         textureStore(outputTexture, gid.xy, vec4f(c, 1));
     }
-
-    // if(abs(f(v, g) - 1) < 0.01) {
-    //     let waveValue = wave(v[2]);
-    //     textureStore(outputTexture, gid.xy, vec4f(waveValue, -waveValue, 0, 1));
-    // }
-
-    // for (var j = 0; j < maxSpeakerPositions/2; j++) {
-    //     if (abs(f(speakerPositions[j], g) - 1) < 0.001) {
-    //         let waveValue = wave(speakerPositions[j][2]);
-    //         textureStore(outputTexture, gid.xy, vec4f(waveValue, -waveValue, 0, 1));
-    //     }
-    // }
 }
 
 `

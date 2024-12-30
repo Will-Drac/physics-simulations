@@ -36,3 +36,18 @@ pre {
     color: #9efffa;
     font-family: monospace;
 }
+
+.optionsCategory {
+    background-color: rgb(13, 50, 60);
+    padding: 25px;
+    margin: 20px;
+    width: 500px;
+    outline: rgb(146, 255, 255);
+    outline-style: solid;
+    outline-width: 5px;
+    border-radius: 5px;
+}
+
+input {
+    width: 100px;
+}

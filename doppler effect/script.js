@@ -5,19 +5,65 @@ const iconSize = 40
 
 let cursor = { x: 0, y: 0 }
 
-const waveSpeed = 200 //(pixels per second)
+const waveSpeed = 100 //(pixels per second)
+const speakerFrequency = 2
 const maxSpeakerSpeed = 0.9 * waveSpeed
 
 const iterationsPerSpeakerUpdate = 10
-const maxSpeakerPositions = Math.ceil(Math.sqrt(2)*document.getElementById("displayCanvas").clientWidth/waveSpeed/((1/144)*iterationsPerSpeakerUpdate))
-console.log(maxSpeakerPositions)
+const maxSpeakerPositions = Math.ceil(Math.sqrt(2) * document.getElementById("displayCanvas").clientWidth / waveSpeed / ((1 / 144) * iterationsPerSpeakerUpdate))
+
 let speakerPos = { x: 400, y: 400, grabbed: false }
 let speakerPositions = []
-const speakerFrequency = 1
+
+
+
+let microphonePos = { x: 400, y: 600, grabbed: false }
+
+let audioContext, oscillator, audioGainNode
+let audioPlaying = false
+let audioFrequency = 200
+document.getElementById("audioStartButton").addEventListener("click", function () {
+    if (audioPlaying) { return }
+    audioContext = new (window.AudioContext || window.webkitAudioContext)()
+    oscillator = audioContext.createOscillator()
+    oscillator.type = "sine"
+    audioGainNode = audioContext.createGain()
+    oscillator.connect(audioGainNode)
+    audioGainNode.connect(audioContext.destination)
+    oscillator.start()
+
+    oscillator.frequency.setValueAtTime(audioFrequency, audioContext.currentTime)
+
+    audioPlaying = true
+})
+document.getElementById("audioStopButton").addEventListener("click", function () {
+    if (oscillator) { oscillator.stop() }
+
+    audioPlaying = false
+})
+
+document.getElementById("frequencyInput").addEventListener("change", function () {
+    audioFrequency = Number(document.getElementById("frequencyInput").value)
+})
+document.getElementById("volumeInput").addEventListener("change", function () {
+    audioGainNode.gain.setValueAtTime(document.getElementById("volumeInput").value, audioContext.currentTime)
+})
+
+
 
 function clamp(v, min, max) {
     return Math.min(Math.max(v, min), max)
 }
+
+function checkSpeakerPos(speakerPosition, samplePosition, time) {
+    return waveSpeed * (time - speakerPosition.t) / Math.sqrt((speakerPosition.x - samplePosition.x) ** 2 + (speakerPosition.y - samplePosition.y) ** 2)
+}
+
+function mapRange(value, inMin, inMax, outMin, outMax) {
+    return (value - inMin) / (inMax - inMin) * (outMax - outMin) + outMin
+}
+
+
 
 async function main() {
     // set up the device
@@ -77,11 +123,15 @@ async function main() {
         }
     })
     document.addEventListener("mousedown", function (e) {
-        if ((cursor.x - speakerPos.x) ** 2 + (cursor.y - speakerPos.y) ** 2 < (iconSize / 2) ** 2) {
+        if ((cursor.x - microphonePos.x) ** 2 + (cursor.y - microphonePos.y) ** 2 < (iconSize / 2) ** 2) {
+            microphonePos.grabbed = true
+        }
+        else if ((cursor.x - speakerPos.x) ** 2 + (cursor.y - speakerPos.y) ** 2 < (iconSize / 2) ** 2) {
             speakerPos.grabbed = true
         }
     })
     document.addEventListener("mouseup", function (e) {
+        microphonePos.grabbed = false
         speakerPos.grabbed = false
     })
 
@@ -115,6 +165,7 @@ async function main() {
             .replace("_CANVASSIZE", `vec2u(${canvas.clientWidth}, ${canvas.clientHeight})`)
             .replace("_MAXSPEAKERPOSITIONS", maxSpeakerPositions)
             .replace("_WAVESPEED", waveSpeed)
+            .replace("_FREQUENCY", speakerFrequency)
     })
 
     const pressureDisplayPipeline = device.createComputePipeline({
@@ -167,6 +218,7 @@ async function main() {
     })
 
 
+
     let lastTime = 0
     let iteration = 0
     function render(time) {
@@ -175,8 +227,13 @@ async function main() {
         const dt = (time - lastTime) / 1000
         lastTime = time
 
+        // moving the microphone
+        if (microphonePos.grabbed) {
+            microphonePos.x = clamp(cursor.x, 0, canvas.clientWidth)
+            microphonePos.y = clamp(cursor.y, 0, canvas.clientWidth)
+        }
         // moving the speaker
-        if (speakerPos.grabbed) {
+        else if (speakerPos.grabbed) {
             const positionDifference = { x: cursor.x - speakerPos.x, y: cursor.y - speakerPos.y }
             const positionDifferenceMag = Math.sqrt(positionDifference.x ** 2 + positionDifference.y ** 2)
 
@@ -210,6 +267,7 @@ async function main() {
 
         iCtx.clearRect(0, 0, iconsCanvas.clientWidth, iconsCanvas.clientWidth)
         iCtx.drawImage(speakerImg, speakerPos.x - iconSize / 2, speakerPos.y - iconSize / 2, iconSize, iconSize)
+        iCtx.drawImage(microphoneImg, microphonePos.x - iconSize / 2, microphonePos.y - iconSize / 2, iconSize, iconSize)
         updateIconsTexture()
 
 
@@ -241,17 +299,44 @@ async function main() {
         const renderCommandBuffer = renderEncoder.finish()
         device.queue.submit([renderCommandBuffer])
 
+
+
+        // playing audio from the microphone
+        if (audioPlaying) {
+            for (let i = 0; i < speakerPositions.length - 1; i++) {
+                const vThis = speakerPositions[i]
+                const vNext = speakerPositions[i + 1]
+
+                const cThis = checkSpeakerPos(vThis, microphonePos, time / 1000)
+                const cNext = checkSpeakerPos(vNext, microphonePos, time / 1000)
+                if (cThis >= 1 && cNext <= 1) {
+                    const midX = mapRange(1, cThis, cNext, vThis.x, vNext.x)
+                    const midY = mapRange(1, cThis, cNext, vThis.y, vNext.y)
+
+                    // vector from the microphone to the speaker
+                    const r = { x: midX - microphonePos.x, y: midY - microphonePos.y }
+
+                    // change in position of the speaker
+                    const dx = vNext.x - vThis.x
+                    const dy = vNext.y - vThis.y
+
+                    // change in position of the speaker perpendicular to the line between the microphone and the speaker
+                    const ds = (dx * r.x + dy * r.y) / Math.sqrt(r.x * r.x + r.y * r.y)
+
+                    const dt = vNext.t - vThis.t
+
+                    const dopplerShift = (waveSpeed / (waveSpeed + (ds / dt)))
+
+                    oscillator.frequency.setValueAtTime(audioFrequency * dopplerShift, audioContext.currentTime)
+                }
+            }
+        }
+
+
+
         requestAnimationFrame(render)
     }
     requestAnimationFrame(render)
 }
 
 main()
-
-/*
-
-keep track of where the speaker is and its phase through time
-for each pixel, look back through time, the phase of the wave at this pixel will be the phase of the speaker at a time t such that t=v/x, where x was its distance away at that time
-to get the frequency at a point, check dp/dt of the speaker at the time described above
-
-*/
