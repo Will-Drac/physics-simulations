@@ -3,7 +3,7 @@ const dt = 0.016
 const g = 9.81
 const L = 4
 
-let startAngle = 90 * Math.PI / 180
+let startAngle = 20 * Math.PI / 180
 
 let angles = [startAngle, startAngle]
 
