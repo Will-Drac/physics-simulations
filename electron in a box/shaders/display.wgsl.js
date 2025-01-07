@@ -17,8 +17,8 @@ fn f(x: f32) -> f32 {
 
     let I = w.x*w.x+w.y*w.y;
 
-    textureStore(outputTexture, id.xy, vec4f(10*w.x, 10*w.y, 0, 1));
-    // textureStore(outputTexture, id.xy, vec4f(f(I)));
+    // textureStore(outputTexture, id.xy, vec4f(10*w.x, 10*w.y, 0, 1));
+    textureStore(outputTexture, id.xy, vec4f(1000*f(I)));
 }
 
 `

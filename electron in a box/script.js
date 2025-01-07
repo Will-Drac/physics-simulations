@@ -1,7 +1,11 @@
 import startCode from "./shaders/start.wgsl.js"
 import updateCode from "./shaders/update.wgsl.js"
+import blurVertCode from "./shaders/blur/blurVert.wgsl.js"
+import blurHoriCode from "./shaders/blur/blurHori.wgsl.js"
 import displayCode from "./shaders/display.wgsl.js"
 import renderCode from "./shaders/render.wgsl.js"
+
+const BlurRadius = 1
 
 async function main() {
     // set up the device (gpu)
@@ -52,13 +56,13 @@ async function main() {
 
     const startPipeline = device.createComputePipeline({
         layout: "auto",
-        compute: {module: startModule}
+        compute: { module: startModule }
     })
 
     const startBindGroup = device.createBindGroup({
         layout: startPipeline.getBindGroupLayout(0),
         entries: [
-            {binding: 0, resource: waveTextures[0].createView()}
+            { binding: 0, resource: waveTextures[0].createView() }
         ]
     })
 
@@ -85,6 +89,37 @@ async function main() {
     })
 
     // bind group set in render
+
+
+
+    const blurIntermediateTexture = device.createTexture({
+        label: "texture holding the wave data but only blurred one way (intermediate)",
+        format: "rg32float",
+        size: [canvas.clientWidth, canvas.clientHeight],
+        usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
+    })
+
+    const blurVertModule = device.createShaderModule({
+        label: "module for the vertical part of a two-pass blur to smooth the wave",
+        code: blurVertCode.replace("_BLURRAD", BlurRadius)
+    })
+
+    const blurVertPipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: { module: blurVertModule }
+    })
+
+    const blurHoriModule = device.createShaderModule({
+        label: "module for the horizontal part of a two-pass blur to smooth the wave",
+        code: blurHoriCode.replace("_BLURRAD", BlurRadius)
+    })
+
+    const blurHoriPipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: { module: blurHoriModule }
+    })
+
+    // bind groups set in render
 
 
 
@@ -116,7 +151,7 @@ async function main() {
 
     const renderPipeline = device.createRenderPipeline({
         layout: "auto",
-        vertex: { 
+        vertex: {
             module: renderModule,
         },
         fragment: {
@@ -144,27 +179,65 @@ async function main() {
     let currentWaveTexture = 0
     function render(time) {
 
-        currentWaveTexture = (currentWaveTexture + 1) % 2
+        for (let i = 0; i < 50; i++) {
+            currentWaveTexture = (currentWaveTexture + 1) % 2
+
+            const updateBindGroup = device.createBindGroup({
+                layout: updatePipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: waveTextures[currentWaveTexture].createView() }, //the one being written to
+                    { binding: 1, resource: waveTextures[(currentWaveTexture + 1) % 2].createView() } //the last one that was updated
+                ]
+            })
+
+            const updateEncoder = device.createCommandEncoder()
+            const updatePass = updateEncoder.beginComputePass()
+            updatePass.setPipeline(updatePipeline)
+            updatePass.setBindGroup(0, updateBindGroup)
+            updatePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+            updatePass.end()
+
+            const updateCommandBuffer = updateEncoder.finish()
+            device.queue.submit([updateCommandBuffer])
+        }
 
 
-        
-        const updateBindGroup = device.createBindGroup({
-            layout: updatePipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: waveTextures[currentWaveTexture].createView() }, //the one being written to
-                { binding: 1, resource: waveTextures[(currentWaveTexture + 1) % 2].createView() } //the last one that was updated
-            ]
-        })
 
-        const updateEncoder = device.createCommandEncoder()
-        const updatePass = updateEncoder.beginComputePass()
-        updatePass.setPipeline(updatePipeline)
-        updatePass.setBindGroup(0, updateBindGroup)
-        updatePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
-        updatePass.end()
+        // const blurVertBindGroup = device.createBindGroup({
+        //     layout: blurVertPipeline.getBindGroupLayout(0),
+        //     entries: [
+        //         { binding: 0, resource: blurIntermediateTexture.createView() },
+        //         { binding: 1, resource: waveTextures[currentWaveTexture].createView() }
+        //     ]
+        // })
 
-        const updateCommandBuffer = updateEncoder.finish()
-        device.queue.submit([updateCommandBuffer])
+        // const blurHoriBindGroup = device.createBindGroup({
+        //     layout: blurHoriPipeline.getBindGroupLayout(0),
+        //     entries: [
+        //         { binding: 0, resource: waveTextures[currentWaveTexture].createView() },
+        //         { binding: 1, resource: blurIntermediateTexture.createView() }
+        //     ]
+        // })
+
+        // const blurVertEncoder = device.createCommandEncoder()
+        // const blurVertPass = blurVertEncoder.beginComputePass()
+        // blurVertPass.setPipeline(blurVertPipeline)
+        // blurVertPass.setBindGroup(0, blurVertBindGroup)
+        // blurVertPass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+        // blurVertPass.end()
+
+        // const blurVertCommandBuffer = blurVertEncoder.finish()
+        // device.queue.submit([blurVertCommandBuffer])
+
+        // const blurHoriEncoder = device.createCommandEncoder()
+        // const blurHoriPass = blurHoriEncoder.beginComputePass()
+        // blurHoriPass.setPipeline(blurHoriPipeline)
+        // blurHoriPass.setBindGroup(0, blurHoriBindGroup)
+        // blurHoriPass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+        // blurHoriPass.end()
+
+        // const blurHoriCommandBuffer = blurHoriEncoder.finish()
+        // device.queue.submit([blurHoriCommandBuffer])
 
 
 
