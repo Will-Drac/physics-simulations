@@ -70,7 +70,7 @@ async function main() {
     const startPass = startEncoder.beginComputePass()
     startPass.setPipeline(startPipeline)
     startPass.setBindGroup(0, startBindGroup)
-    startPass.dispatchWorkgroups(1, 1)
+    startPass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
     startPass.end()
 
     const startCommandBuffer = startEncoder.finish()
