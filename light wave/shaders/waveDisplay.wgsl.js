@@ -31,5 +31,3 @@ struct uniforms {
 }
 
 `
-
-// on to renderWave.wgsl.js

@@ -36,7 +36,6 @@ struct uniforms {
 @group(0) @binding(2) var linearSampler: sampler;
 @group(0) @binding(3) var obstaclesTexture: texture_2d<f32>;
 @group(0) @binding(4) var iorTexture: texture_2d<f32>;
-@group(0) @binding(5) var propTexture: texture_2d<f32>;
 @group(0) @binding(6) var<uniform> u: uniforms;
 
 @fragment fn fs(i:vertexShaderOutput)->@location(0)vec4f{ //the pixels, just the sum of the wave texture and the obstacles texture (which is black and white)
@@ -44,17 +43,13 @@ struct uniforms {
     let obstacles = textureSample(obstaclesTexture, linearSampler, i.uv);
     let ior = textureSample(iorTexture, linearSampler, i.uv);
     let lightColor = textureSample(colorTexture, linearSampler, i.uv);
-    let prop = textureSample(propTexture, linearSampler, i.uv);
 
     if (u.renderMode == 0) {
         return wave+obstacles+ior-vec4f(0.5,0.5,0.5,0);
     }
-    else if (u.renderMode == 1) {
+    else {
         let iorCol = ior-vec4f(0.5,0.5,0.5,0);
         return lightColor+obstacles+iorCol*iorCol*iorCol;
-    }
-    else {
-        return prop;
     }
 }
 

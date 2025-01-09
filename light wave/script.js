@@ -1,11 +1,9 @@
 // Importing the shader code from the different files. By code, I mean literally a long string containing the code.
 // They are really js files containing only the string, the .wgsl is just to tell me it's wgsl (shader) code.
+import emitCode from "./shaders/emit.wgsl.js"
 import updateCode from "./shaders/updateWave.wgsl.js"
 import colorCode from "./shaders/color.wgsl.js"
-import transcribeCode from "./shaders/transcribe.wgsl.js"
-import thetaCode from "./shaders/theta.wgsl.js"
-import propCode from "./shaders/prop.wgsl.js"
-import displayPropCode from "./shaders/displayProp.wgsl.js"
+import waveDisplayCode from "./shaders/waveDisplay.wgsl.js"
 import renderCode from "./shaders/renderWave.wgsl.js"
 
 let shouldStop = false
@@ -102,64 +100,7 @@ async function main(scene) {
         mipmapFilter: "linear",
     })
 
-    // -----------------theta setup----------------- //
-    const thetaModule = device.createShaderModule({
-        code: thetaCode
-    })
-
-    const thetaPipeline = device.createComputePipeline({
-        layout: "auto",
-        compute: { module: thetaModule }
-    })
-
-    const thetaTexture = device.createTexture({
-        format: "r32float",
-        dimension: "3d",
-        size: [canvas.clientWidth, canvas.clientHeight, scene.numWavelengths],
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
-    })
-
-    // -----------------prop(agation) setup-----------------//
-    const propModule = device.createShaderModule({
-        code: propCode
-    })
-
-    const propPipeline = device.createComputePipeline({
-        layout: "auto",
-        compute: { module: propModule }
-    })
-
-    const propTexture = device.createTexture({
-        format: "rg32float",
-        dimension: "3d",
-        size: [canvas.clientWidth, canvas.clientHeight, scene.numWavelengths],
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
-    })
-
-    const propBindGroup = device.createBindGroup({
-        layout: propPipeline.getBindGroupLayout(0),
-        entries: [
-            { binding: 0, resource: propTexture.createView() },
-            { binding: 1, resource: thetaTexture.createView() },
-            { binding: 2, resource: scene.obstacleTexture.createView() }
-        ]
-    })
-
-    // -----------------update setup----------------- //
-
-    const updateModule = device.createShaderModule({
-        label: "wave update shader module",
-        code:
-            updateCode
-                .replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
-                .replace("_EMITTER", scene.emitterCode)
-    })
-
-    const updatePipeline = device.createComputePipeline({ //this is going to be a compute pipeline because i'm not rendering an image, but instead using the gpu to compute a bunch of values (outputting a bunch of floats formatted in a texture because it's easy)
-        label: "wave update pipeline",
-        layout: "auto",
-        compute: { module: updateModule } //use the code for updating
-    })
+    // -----------------textures setup----------------- //
 
     const obstaclesTexture = scene.obstacleTexture
     const iorTexture = scene.iorTexture
@@ -178,19 +119,84 @@ async function main(scene) {
         })
     }
 
-    // this is going to be a buffer that can be sent right to the gpu so that I can send information from the cpu to the gpu
-    // it's called a uniform because it's the same (uniform) for every thread of the gpu
-    const updateUniformsBuffer = device.createBuffer({
-        size: 4,
+    // -----------------computing barriers----------------- //
+
+    // -----------------emit setup----------------- //
+
+    const emitModule = device.createShaderModule({
+        label: "light emit shader module",
+        code:
+            emitCode
+                .replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
+        // !emitter controls
+    })
+
+    const emitPipeline = device.createComputePipeline({
+        label: "emit pipeline",
+        layout: "auto",
+        compute: { module: emitModule }
+    })
+
+    const emitUniformsBuffer = device.createBuffer({
+        size: 176,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
-    const updateUniformsValues = new ArrayBuffer(4)
-    const updateUniformsViews = {
-        time: new Float32Array(updateUniformsValues),
+    const emitUniformsValues = new ArrayBuffer(176)
+    const emitUniformsViews = {
+        time: new Float32Array(emitUniformsValues, 0, 1),
+        emitters: [
+            {
+                kind: new Int32Array(emitUniformsValues, 16, 1),
+                posOrDir: new Float32Array(emitUniformsValues, 24, 2),
+                col: new Float32Array(emitUniformsValues, 32, 3),
+            },
+            {
+                kind: new Int32Array(emitUniformsValues, 48, 1),
+                posOrDir: new Float32Array(emitUniformsValues, 56, 2),
+                col: new Float32Array(emitUniformsValues, 64, 3),
+            },
+            {
+                kind: new Int32Array(emitUniformsValues, 80, 1),
+                posOrDir: new Float32Array(emitUniformsValues, 88, 2),
+                col: new Float32Array(emitUniformsValues, 96, 3),
+            },
+            {
+                kind: new Int32Array(emitUniformsValues, 112, 1),
+                posOrDir: new Float32Array(emitUniformsValues, 120, 2),
+                col: new Float32Array(emitUniformsValues, 128, 3),
+            },
+            {
+                kind: new Int32Array(emitUniformsValues, 144, 1),
+                posOrDir: new Float32Array(emitUniformsValues, 152, 2),
+                col: new Float32Array(emitUniformsValues, 160, 3),
+            },
+        ],
     }
 
     // setting the initial values of the uniforms
-    updateUniformsViews.time[0] = 0
+    emitUniformsViews.time[0] = 0
+
+    // bind group set later
+
+
+    // -----------------update setup----------------- //
+
+    const updateModule = device.createShaderModule({
+        label: "wave update shader module",
+        code:
+            updateCode
+                .replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
+        // .replace("_EMITTER", scene.emitterCode)
+    })
+
+    const updatePipeline = device.createComputePipeline({ //this is going to be a compute pipeline because i'm not rendering an image, but instead using the gpu to compute a bunch of values (outputting a bunch of floats formatted in a texture because it's easy)
+        label: "wave update pipeline",
+        layout: "auto",
+        compute: { module: updateModule } //use the code for updating
+    })
+
+    // bind group set later
+
 
     // -----------------color setup----------------- //
     const colorModule = device.createShaderModule({
@@ -222,21 +228,21 @@ async function main(scene) {
     }
     colorUniformsViews.brightness[0] = 0
 
-    // -----------------transcription setup----------------- //
-    //* the wave is in an r32float texture, it needs to be transcribed to an rgba8unorm with a compute shader so that it can be rendered in a fragment shader and shown to the user
 
-    const transcribeModule = device.createShaderModule({
+    // -----------------wave display setup----------------- //
+
+    const waveDisplay = device.createShaderModule({
         label: "wave texture transcribe module",
-        code: transcribeCode
+        code: waveDisplayCode
     })
 
-    const transcribePipeline = device.createComputePipeline({
+    const waveDisplayPipeline = device.createComputePipeline({
         label: "wave texture transcribe pipeline",
         layout: "auto",
-        compute: { module: transcribeModule }
+        compute: { module: waveDisplay }
     })
 
-    const transcribedWaveTexture = device.createTexture({ // <- this texture will be what the user will see
+    const waveDisplayTexture = device.createTexture({ // <- this texture will be what the user will see
         label: "transcribed wave texture to an rgba8unorm texture",
         format: "rgba8unorm",
         dimension: "2d",
@@ -244,33 +250,8 @@ async function main(scene) {
         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
     })
 
-    // -----------------display prop setup-----------------//
-    const displayPropModule = device.createShaderModule({
-        code: displayPropCode
-    })
-
-    const displayPropPipeline = device.createComputePipeline({
-        layout: "auto",
-        compute: { module: displayPropModule }
-    })
-
-    const displayPropTexture = device.createTexture({
-        format: "rgba8unorm",
-        dimension: "2d",
-        size: [canvas.clientWidth, canvas.clientHeight],
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
-    })
-
-    const displayPropBindGroup = device.createBindGroup({
-        layout: displayPropPipeline.getBindGroupLayout(0),
-        entries: [
-            { binding: 0, resource: displayPropTexture.createView() },
-            { binding: 1, resource: propTexture.createView() }
-        ]
-    })
 
     // -----------------render setup----------------- //
-    // to get the texture on the screen, we need a third shader because compute shaders can't write to a canvas
 
     const renderModule = device.createShaderModule({
         label: "wave render module",
@@ -305,12 +286,11 @@ async function main(scene) {
     const renderBindGroup = device.createBindGroup({
         layout: renderPipeline.getBindGroupLayout(0),
         entries: [
-            { binding: 0, resource: transcribedWaveTexture.createView() }, //<- the wave texture to render
+            { binding: 0, resource: waveDisplayTexture.createView() }, //<- the wave texture to render
             { binding: 1, resource: colorTexture.createView() },
             { binding: 2, resource: linearSampler }, //<- a sampler, telling the shader how to sample the texture
             { binding: 3, resource: obstaclesTexture.createView() }, //<- the texture containing the obstacles, because I want to overlay the obstacles on top of the wave
             { binding: 4, resource: iorTexture.createView() },
-            { binding: 5, resource: displayPropTexture.createView() },
             { binding: 6, resource: { buffer: renderUniformsBuffer } },
         ]
     })
@@ -327,6 +307,8 @@ async function main(scene) {
         ]
     }
 
+
+
     let frameCount = 0
     async function render() { // this gets called each frame
         if (shouldStop) {
@@ -338,20 +320,38 @@ async function main(scene) {
         frameCount++
         document.getElementById("frameCount").innerHTML = "Time Elapsed: " + (frameCount * 0.065).toFixed(1) + "fs"
 
+        // -----------------emit stuff----------------- //
+
+        emitUniformsViews.time[0] = frameCount
+        device.queue.writeBuffer(emitUniformsBuffer, 0, emitUniformsValues) //<- update the buffer object
+
+        const emitBindGroup = device.createBindGroup({
+            layout: emitPipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: waveTextures[lastUpdatedTexture].createView() },
+                { binding: 1, resource: iorTexture.createView() },
+                { binding: 2, resource: { buffer: emitUniformsBuffer } }
+            ]
+        })
+
+        const emitEncoder = device.createCommandEncoder()
+        const emitComputePass = emitEncoder.beginComputePass()
+        emitComputePass.setPipeline(emitPipeline)
+        emitComputePass.setBindGroup(0, emitBindGroup)
+        emitComputePass.dispatchWorkgroups(100, 1, scene.numWavelengths) //hard set 5 emitters
+        emitComputePass.end()
+        const emitCommandBuffer = emitEncoder.finish()
+        device.queue.submit([emitCommandBuffer])
+
         // -----------------update stuff----------------- //
-        updateUniformsViews.time[0] = frameCount
-        device.queue.writeBuffer(updateUniformsBuffer, 0, updateUniformsValues) //<- update the buffer object
 
         const updateBindGroup = device.createBindGroup({
             layout: updatePipeline.getBindGroupLayout(0),
             entries: [
-                { binding: 0, resource: { buffer: updateUniformsBuffer } }, //all the uniforms
-                { binding: 1, resource: waveTextures[(lastUpdatedTexture + 1) % 3].createView() }, //the texture we're going to be updating (after this, it will be the most recent)
-                { binding: 2, resource: waveTextures[lastUpdatedTexture].createView() }, //the last texture that was updated
-                { binding: 3, resource: waveTextures[(lastUpdatedTexture + 2) % 3].createView() }, //the before-last texture
-                { binding: 4, resource: obstaclesTexture.createView() }, //the obstacles
-                { binding: 5, resource: iorTexture.createView() },
-                // { binding: 6, resource: propTexture.createView() }
+                { binding: 0, resource: waveTextures[(lastUpdatedTexture + 1) % 3].createView() }, //the texture we're going to be updating (after this, it will be the most recent)
+                { binding: 1, resource: waveTextures[lastUpdatedTexture].createView() }, //the last texture that was updated
+                { binding: 2, resource: waveTextures[(lastUpdatedTexture + 2) % 3].createView() }, //the before-last texture
+                { binding: 3, resource: iorTexture.createView() }
             ]
         })
 
@@ -374,7 +374,7 @@ async function main(scene) {
         lastUpdatedTexture = (lastUpdatedTexture + 1) % 3 //a new texture has just been updated
 
         // -----------------color stuff-----------------
-        colorUniformsViews.brightness[0] = Math.pow(10,document.getElementById("brightness").value)
+        colorUniformsViews.brightness[0] = Math.pow(10, document.getElementById("brightness").value)
         device.queue.writeBuffer(colorUniformsBuffer, 0, colorUniformsValues)
         const colorBindGroup = device.createBindGroup({
             layout: colorPipeline.getBindGroupLayout(0),
@@ -394,67 +394,28 @@ async function main(scene) {
         const colorCommandBuffer = colorEncoder.finish()
         device.queue.submit([colorCommandBuffer])
 
-        // -----------------transcription stuff----------------- //
-        const transcribeBindGroup = device.createBindGroup({
-            layout: transcribePipeline.getBindGroupLayout(0),
+        // -----------------wave display stuff----------------- //
+        const waveDisplayBindGroup = device.createBindGroup({
+            layout: waveDisplayPipeline.getBindGroupLayout(0),
             entries: [
-                { binding: 0, resource: transcribedWaveTexture.createView() },
+                { binding: 0, resource: waveDisplayTexture.createView() },
                 { binding: 1, resource: waveTextures[lastUpdatedTexture].createView() },
                 { binding: 2, resource: { buffer: colorUniformsBuffer } }
             ]
         })
 
-        const transcribeEncoder = device.createCommandEncoder({
+        const waveDisplayEncoder = device.createCommandEncoder({
             label: "wave texture transcribe command encoder"
         })
-        const transcribeComputePass = transcribeEncoder.beginComputePass({
+        const waveDisplayComputePass = waveDisplayEncoder.beginComputePass({
             label: "wave texture transcribe compute pass"
         })
-        transcribeComputePass.setPipeline(transcribePipeline)
-        transcribeComputePass.setBindGroup(0, transcribeBindGroup)
-        transcribeComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
-        transcribeComputePass.end()
-        const transcribeCommandBuffer = transcribeEncoder.finish()
-        device.queue.submit([transcribeCommandBuffer])
-
-        // -----------------theta stuff-----------------
-        // const thetaBindGroup = device.createBindGroup({
-        //     layout: thetaPipeline.getBindGroupLayout(0),
-        //     entries: [
-        //         { binding: 0, resource: thetaTexture.createView() },
-        //         { binding: 1, resource: waveTextures[lastUpdatedTexture].createView() }
-        //     ]
-        // })
-
-        // const thetaEncoder = device.createCommandEncoder()
-        // const thetaComputePass = thetaEncoder.beginComputePass()
-        // thetaComputePass.setPipeline(thetaPipeline)
-        // thetaComputePass.setBindGroup(0, thetaBindGroup)
-        // thetaComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight, scene.numWavelengths)
-        // thetaComputePass.end()
-        // const thetaCommandBuffer = thetaEncoder.finish()
-        // device.queue.submit([thetaCommandBuffer])
-
-        // // -----------------prop stuff----------------- //
-
-        // const propEncoder = device.createCommandEncoder()
-        // const propComputePass = propEncoder.beginComputePass()
-        // propComputePass.setPipeline(propPipeline)
-        // propComputePass.setBindGroup(0, propBindGroup)
-        // propComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight, scene.numWavelengths)
-        // propComputePass.end()
-        // const propCommandBuffer = propEncoder.finish()
-        // device.queue.submit([propCommandBuffer])
-
-        // //  -----------------display prop stuff----------------- //
-        // const displayPropEncoder = device.createCommandEncoder()
-        // const displayPropComputePass = displayPropEncoder.beginComputePass()
-        // displayPropComputePass.setPipeline(displayPropPipeline)
-        // displayPropComputePass.setBindGroup(0, displayPropBindGroup)
-        // displayPropComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
-        // displayPropComputePass.end()
-        // const displayPropCommandBuffer = displayPropEncoder.finish()
-        // device.queue.submit([displayPropCommandBuffer])
+        waveDisplayComputePass.setPipeline(waveDisplayPipeline)
+        waveDisplayComputePass.setBindGroup(0, waveDisplayBindGroup)
+        waveDisplayComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+        waveDisplayComputePass.end()
+        const waveDisplayCommandBuffer = waveDisplayEncoder.finish()
+        device.queue.submit([waveDisplayCommandBuffer])
 
         // -----------------render stuff----------------- //
         renderPassDescriptor.colorAttachments[0].view = context.getCurrentTexture().createView() //set the target of the shader to be the canvas
