@@ -10,48 +10,46 @@ struct uniforms {
 
 _NUMWAVELENGTHS
 
+fn smoothTransition(v: f32) -> f32 {
+    return -2*v*v*v + 3*v*v;
+}
+
+fn smoothMix(v: f32, a: f32, b: f32) -> f32 {
+    return (1-smoothTransition(v))*a + smoothTransition(v)*b;
+}
+
+fn smoothInterpolatePoints(x: f32, p: array<vec2f, 8>) -> f32 {
+    for (var i = 0; i < 7; i++) {
+        if (p[i].x <= x && x < p[i+1].x) {
+            return smoothMix(
+                (x-p[i].x) / (p[i+1].x-p[i].x),
+                p[i].y,
+                p[i+1].y
+            );
+        }
+    }
+
+    return 0;
+}
+
 fn wavelengthToRgb(wavelength: f32) -> vec3f {
-    var r: f32 = 0.0;
-    var g: f32 = 0.0;
-    var b: f32 = 0.0;
+    let r = array<vec2f, 8>(
+        vec2f(375, 0), vec2f(400, 143), vec2f(460, 1), vec2f(500, 0), vec2f(540, 33), vec2f(600, 226), vec2f(670, 252), vec2f(725, 0)
+    );
 
-    if (wavelength >= 380.0 && wavelength < 440.0) {
-        r = -(wavelength - 440.0) / (440.0 - 380.0);
-        g = 0.0;
-        b = 1.0;
-    } else if (wavelength >= 440.0 && wavelength < 490.0) {
-        r = 0.0;
-        g = (wavelength - 440.0) / (490.0 - 440.0);
-        b = 1.0;
-    } else if (wavelength >= 490.0 && wavelength < 510.0) {
-        r = 0.0;
-        g = 1.0;
-        b = -(wavelength - 510.0) / (510.0 - 490.0);
-    } else if (wavelength >= 510.0 && wavelength < 580.0) {
-        r = (wavelength - 510.0) / (580.0 - 510.0);
-        g = 1.0;
-        b = 0.0;
-    } else if (wavelength >= 580.0 && wavelength < 645.0) {
-        r = 1.0;
-        g = -(wavelength - 645.0) / (645.0 - 580.0);
-        b = 0.0;
-    } else if (wavelength >= 645.0 && wavelength <= 780.0) {
-        r = 1.0;
-        g = 0.0;
-        b = 0.0;
-    }
+    let g = array<vec2f, 8>(
+        vec2f(375, 0), vec2f(450, 0), vec2f(500, 248), vec2f(530, 255), vec2f(700, 0), vec2f(725, 0), vec2f(725, 0), vec2f(725, 0)
+    );
 
-    // Intensity correction for visible spectrum
-    var intensity: f32 = 0.0;
-    if (wavelength >= 380.0 && wavelength < 420.0) {
-        intensity = 0.3 + 0.7 * (wavelength - 380.0) / (420.0 - 380.0);
-    } else if (wavelength >= 420.0 && wavelength < 645.0) {
-        intensity = 1.0;
-    } else if (wavelength >= 645.0 && wavelength <= 780.0) {
-        intensity = 0.3 + 0.7 * (780.0 - wavelength) / (780.0 - 645.0);
-    }
+    let b = array<vec2f, 8>(
+        vec2f(375, 0), vec2f(400, 99), vec2f(460, 255), vec2f(480, 255), vec2f(530, 0), vec2f(670, 2), vec2f(700, 16), vec2f(725, 0)
+    );
 
-    return vec3f(r, g, b) * intensity;
+    return vec3f(
+        smoothInterpolatePoints(wavelength, r),
+        smoothInterpolatePoints(wavelength, g),
+        smoothInterpolatePoints(wavelength, b)
+    ) / 255;
 }
 
 fn f(x: f32) -> f32 {
