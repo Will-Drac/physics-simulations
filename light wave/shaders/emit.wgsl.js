@@ -29,7 +29,7 @@ const dt = 0.000000000004;
     let frequency = c / (wavelength*ior);
     let t = u.time * dt;
     let theta = u.time * dt * 6.28 * frequency; //gives the wave the wavelength i want
-    textureStore(outputTexture, id+vec3u(250, 0, 0), vec4f(sin(theta), cos(theta), 0, 0));
+    textureStore(outputTexture, id+vec3u(300, 300, 0), vec4f(sin(theta), cos(theta), 0, 0));
 }
 
 `

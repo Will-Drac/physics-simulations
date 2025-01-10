@@ -1,6 +1,5 @@
 export default /*wgsl*/ `
 
-// telling the gpu what everything it was sent in the bind group is
 @group(0) @binding(0) var outputTexture: texture_storage_3d<rg32float, write>;
 @group(0) @binding(1) var lastTexture: texture_3d<f32>;
 @group(0) @binding(2) var beforeLastTexture: texture_3d<f32>;
@@ -14,10 +13,10 @@ const dx = 0.003;
 const dy = 0.003;
 const pi = 3.141592653589793438;
 
-@compute @workgroup_size(1) fn updateWave( //@workgroup_size(1) means one thread per workgroup (and i already set one workgroup per pixel); because it has the tag @compute, the shader knows to start here
-    @builtin(global_invocation_id) id:vec3<u32> //this workgroup knows which one it is
-){
-    let i = vec3i(id.xyz); //because I have each pixel a workgroup, its id corresponds to the pixel it should work on
+@compute @workgroup_size(1) fn updateWave(
+    @builtin(global_invocation_id) id: vec3u
+) {
+    let i = vec3i(id.xyz);
 
     let ior = textureLoad(iorTexture, i.xy, 0).r * 2;
     let v = c/ior;
