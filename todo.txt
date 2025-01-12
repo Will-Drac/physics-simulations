@@ -6,14 +6,14 @@ absorption in the light wave simulation finally
 New ideas:
     mechanics roller coaster OR mechanics sandbox <- cooler i think
 
+    atom/molecule quantum physics simulation
+
     nuclear physics stuff (not exactly sure what)
 
     3d magnetic field of solenoid, loop, and wire
         visualizing the field with arrows and having particles go through, all real time
 
     induction things
-
-    small angle approximation vs real in pendulums
 
     beats but you can see the graph and hear them
 
