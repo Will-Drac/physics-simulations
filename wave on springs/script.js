@@ -278,7 +278,7 @@ async function main() {
         const displayPass = displayEncoder.beginComputePass()
         displayPass.setPipeline(displayPipeline)
         displayPass.setBindGroup(0, displayBindGroup)
-        displayPass.dispatchWorkgroups(numPoints - 1)
+        displayPass.dispatchWorkgroups(numPoints / 2 - 1)
         displayPass.end()
 
         const displayCommandBuffer = displayEncoder.finish()
