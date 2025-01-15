@@ -151,10 +151,10 @@ function draw() {
     speedDisplay.innerText = (outParticleSpeed / 10).toFixed(2) + "c"
     if (oldParticleSpeed !== outParticleSpeed) {
         for (let proton of protons) {
-            proton.pos.x = random(-width / 2, width / 2)
+            proton.pos = createVector(random(-width / 2, width / 2), random(600, 750))
         }
         for (let electron of electrons) {
-            electron.pos.x = random(-width / 2, width / 2)
+            electron.pos = createVector(random(-width / 2, width / 2), random(600, 750))
         }
     }
     oldParticleSpeed = outParticleSpeed
