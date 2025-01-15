@@ -1,17 +1,29 @@
 const e = 1.60217e-19
+const c = 20
 
 let protons = []
 let electrons = []
 
+let outParticleSpeed = 10
+
+function relativityShiftVelocity(oldVel, forVel) {
+    return (oldVel+forVel)/(1+(oldVel*forVel)/c)
+}
+
+function getLengthContraction(velRel) {
+    return Math.sqrt(1-(velRel/c)**2)
+}
+
 class Particle {
     constructor(pos, speed, charge) {
         this.pos = pos
-        this.vel = createVector(speed, 0)
+        this.speed = speed
         this.charge = charge
     }
 
     update() {
-        this.pos.add(this.vel)
+        this.pos.x += relativityShiftVelocity(this.speed, -outParticleSpeed)
+        // this.pos.x += this.speed
         this.pos.x = this.pos.x%width
         while (this.pos.x < 0) {
             this.pos.x+=width
@@ -28,7 +40,11 @@ class Particle {
         else {
             fill(0, 0, 0)
         }
-        ellipse(this.pos.x, this.pos.y, 5)
+        ellipse(
+            getLengthContraction(relativityShiftVelocity(this.speed, -outParticleSpeed))*(this.pos.x-width/2)+width/2,
+            this.pos.y,
+            5
+        )
     }
 }
 
@@ -58,6 +74,9 @@ function draw() {
         electron.update()
         electron.draw()
     }
+
+    fill(255, 0, 0)
+    ellipse(width/2, height/2, 20)
 }
 
 
