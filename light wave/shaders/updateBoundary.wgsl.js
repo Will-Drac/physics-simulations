@@ -5,15 +5,116 @@ export default /*wgsl*/ `
 @group(0) @binding(2) var boundaryTexture: texture_2d<f32>;
 @group(0) @binding(3) var obstaclesTexture: texture_2d<f32>;
 
+_NUMWAVELENGTHS
+
 const c = 299792458.;
 const dt = 0.000000000004;
 const ds = 0.003; //the spacing between each pixel
+
+
+fn modulo(x: f32, y: f32) -> f32 {
+    return x - y * floor(x/y);
+}
+
 
 fn bilinearInterpolation(samplePos: vec2f, topLeft: vec2f, topRight: vec2f, bottomLeft: vec2f, bottomRight: vec2f) -> vec2f {
     let top = (1-samplePos.x)*topLeft + samplePos.x*topRight;
     let bottom = (1-samplePos.x)*bottomLeft + samplePos.x*bottomRight;
 
     return (1-samplePos.y)*top + samplePos.y*bottom;
+}
+
+
+
+fn smoothTransition(v: f32) -> f32 {
+    return -2*v*v*v + 3*v*v;
+}
+
+fn smoothMix(v: f32, a: f32, b: f32) -> f32 {
+    return (1-smoothTransition(v))*a + smoothTransition(v)*b;
+}
+
+fn smoothInterpolatePoints(x: f32, p: array<vec2f, 8>) -> f32 {
+    for (var i = 0; i < 7; i++) {
+        if (p[i].x <= x && x < p[i+1].x) {
+            return smoothMix(
+                (x-p[i].x) / (p[i+1].x-p[i].x),
+                p[i].y,
+                p[i+1].y
+            );
+        }
+    }
+
+    return 0;
+}
+
+fn rgbToHsv(color: vec3f) -> vec3f {
+    let r = color.x;
+    let g = color.y;
+    let b = color.z;
+
+    let max = max(max(r, g), b);
+    let min = min(min(r, g), b);
+    let delta = max - min;
+
+    var h = 0.0;
+    if (delta != 0.0) {
+        if (max == r) {
+            h = (g - b) / delta;
+        } else if (max == g) {
+            h = 2.0 + (b - r) / delta;
+        } else {
+            h = 4.0 + (r - g) / delta;
+        }
+        h = modulo((h * 60.0), 360);
+        if (h < 0.0) {
+            h += 360.0;
+        }
+    }
+
+    var s = 0.0;
+    if (max != 0.0) {
+        s = delta / max;
+    }
+    let v = max;
+
+    return vec3f(h, s, v);
+}
+
+
+fn f1(x: f32) -> f32 {
+    if (-1 < x && x < 1) {
+        return x*x*x*x - 2*x*x +1;
+    }
+    else {
+        return 0;
+    }
+}
+
+// need to min this with 1 maybe
+fn f2(x: f32, d: f32) -> f32 {
+    let F = f1(2*d*modulo(x-0.5, 1) - 1);
+    if (d<1) {
+        return 1/(0.2*d*d*d*d-2/3*d*d+1) * F;
+    }
+    else {
+        return 15*d/8 * F;
+    }
+}
+
+fn hueToWavelength(x: f32) -> f32 {
+    return -4.2869740681845535e-10*x*x*x*x*x + 4.698813090535953e-7*x*x*x*x - 0.00019363276122179643*x*x*x + 0.03672601180984415*x*x - 3.766646240393876*x + 700;
+}
+
+fn saturationToSpectrumStretch(sat: f32) -> f32 {
+    return pow(sat/0.7, 8.6) + sat/0.7;
+}
+
+fn reflectionSpectrum(color: vec3f, wavelength: f32) -> f32 {
+    let hsv = rgbToHsv(color);
+    let mainWavelength = hueToWavelength(hsv.x);
+
+    return hsv.z * f2((wavelength-mainWavelength)/300, saturationToSpectrumStretch(hsv.y));
 }
 
 @compute @workgroup_size(1) fn updateBoundaries(
@@ -46,11 +147,23 @@ fn bilinearInterpolation(samplePos: vec2f, topLeft: vec2f, topRight: vec2f, bott
         );
 
         // gradient of the wave in the direction of the boundary's normal
-        let normalGradient = (lastValue-sampleValue )/ds;
+        let normalGradient = (lastValue-sampleValue)/ds;
 
-        let newValue = -c*dt*normalGradient + lastValue;
+        let absorbingValue = -c*dt*normalGradient + lastValue;
+        let reflectingValue = vec2f(0);
 
-        textureStore(outputTexture, id.xyz, vec4f(newValue, 0, 0));
+
+
+        let thisBoundaryColor  = textureLoad(obstaclesTexture, id.xy, 0).rgb;
+        let thisWavelength = (700-400)*(f32(id.z)+.5)/numWavelengths+400;
+
+        let reflectionAmount = reflectionSpectrum(thisBoundaryColor, thisWavelength);
+
+
+
+        textureStore(outputTexture, id.xyz, vec4f(
+            (1-reflectionAmount)*absorbingValue + reflectionAmount*reflectingValue,
+        0, 0));
     }
 }
 

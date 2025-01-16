@@ -18,7 +18,7 @@ async function start(device) {
     //     device
     // )
     let obstacleTexture = await loadTexture(
-        "obstacles new/absorbTEst.png",
+        "obstacles new/absorbTest3.png",
         device
     )
 
@@ -267,7 +267,9 @@ async function main(scene) {
 
     const updateBoundaryModule = device.createShaderModule({
         label: "update boundary texels module",
-        code: updateBoundaryCode
+        code: 
+            updateBoundaryCode
+                .replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
     })
 
     const updateBoundaryPipeline = device.createComputePipeline({
@@ -567,3 +569,13 @@ async function main(scene) {
     }
     requestAnimationFrame(render)
 }
+
+/*
+TODO:
+
+figure out what's going on with dx dy ds and that weird constant at the wavelength calculation
+implement color in boundaries
+multiple emitters, coloured, and movable?
+redo all obstacle textures with the new way
+redo ior textures to be smooth (maybe that helps)
+*/

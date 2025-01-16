@@ -52,6 +52,8 @@ fn wavelengthToRgb(wavelength: f32) -> vec3f {
     ) / 255;
 }
 
+
+
 fn f(x: f32) -> f32 {
     return x/(x+1);
 }
@@ -67,6 +69,8 @@ fn tonemap(col: vec3f) -> vec3f {
 fn ACES(col: vec3f) -> vec3f {
     return (col*(2.51*col+0.03))/(col*(2.42*col+0.59)+0.14);
 }
+
+
 
 @compute @workgroup_size(1) fn getIntensity(
     @builtin(global_invocation_id) id:vec3u

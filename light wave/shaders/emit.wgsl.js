@@ -34,6 +34,5 @@ const dt = 0.000000000004;
 
 `
 
-
 //! not done at all for now
 // what do you do about directional emitters, that require so many pixels
