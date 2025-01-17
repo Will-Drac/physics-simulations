@@ -12,7 +12,7 @@ export default /*wgsl*/ `
 
     let borderHighlight = min(1, 10*(abs(b.x) + abs(b.y)));
 
-    let borderCol = vec4f(1, 0, 0, 1) * borderHighlight;
+    let borderCol = vec4f(1, 1, 1, 1) * borderHighlight;
 
     o.a = round(o.a);
 
