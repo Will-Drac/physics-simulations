@@ -14,11 +14,11 @@ fn multImaginary(v: vec2f) -> vec2f {
     let i = vec2f(id.xy);
     let S = vec2f(textureDimensions(outputTexture));
 
-    let M = exp(-((i.y - S.y / 2.0) * (i.y - S.y / 2.0)) / 1000.0) * exp(-(((i.x - S.x / 2.0 - S.x / 4.0 - S.x / 8.0) * (i.x - S.x / 2.0 - S.x / 4.0 - S.x / 8.0)) / 1000.0));
+    let M = exp(-((i.y - S.y / 2.0) * (i.y - S.y / 2.0)) / 100.0) * exp(-(((i.x - S.x / 2.0 - S.x / 4.0 - S.x / 8.0) * (i.x - S.x / 2.0 - S.x / 4.0 - S.x / 8.0)) / 100.0));
 
     let v = vec2f(
         M * sin((60.0 * PI * i.x) / S.x),
-        - M * cos((60.0 * PI * i.x) / S.x + PI)
+        M * cos((60.0 * PI * i.x) / S.x)
     );
 
     textureStore(outputTexture, id.xy, vec4f(v, 0, 0));
