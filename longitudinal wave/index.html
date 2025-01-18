@@ -7,19 +7,21 @@
     <title>Longitudinal Wave Simulation</title>
     <meta name="description" content="A simulation of a longitudinal wave with 65535 particles, computed real-time with the GPU.">
     <script src="script.js" type="module"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/base.css">
 </head>
 
 <body>
     <canvas id="mainCanvas" width="800" height="600"></canvas>
-    <p id="frameRateDisplay"></p>
-    <span>Wavelength: </span><input type="range" id="wavelengthSlider" min="0" max="200" step="0.01" value="150"><span id="wavelengthValue"></span>
-    <br>
-    <span>Period: </span><input type="range" id="periodSlider" min="-4" max="4" step="0.01" value="2"><span id="periodValue"></span>
-    <br>
-    <span>Amplitude: </span><input type="range" id="amplitudeSlider" min="0" max="40" step="0.01" value="5"><span id="amplitudeValue"></span>
-    <br>
-    <span>Speed: </span><span id="speedDisplay"></span>
+    <div class="group">
+        <p id="frameRateDisplay"></p>
+        <span>Wavelength: </span><input type="range" id="wavelengthSlider" min="0" max="200" step="0.01" value="150"><span id="wavelengthValue"></span>
+        <br>
+        <span>Period: </span><input type="range" id="periodSlider" min="-4" max="4" step="0.01" value="2"><span id="periodValue"></span>
+        <br>
+        <span>Amplitude: </span><input type="range" id="amplitudeSlider" min="0" max="40" step="0.01" value="5"><span id="amplitudeValue"></span>
+        <br>
+        <span>Speed: </span><span id="speedDisplay"></span>
+    </div>
 </body>
 
 </html>
