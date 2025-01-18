@@ -8,7 +8,7 @@
     <title>Electric Field Simulation</title>
     <meta name="description" content="A simulation of the electric field with charged surfaces that you can draw!">
 
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="/base.css">
 
     <script src="libraries/p5.min.js"></script>
     <script src="libraries/p5.sound.min.js"></script>
@@ -18,30 +18,33 @@
 
 <body>
     <script src="sketch.js"></script>
-    <div id="controls">
-        <span>Charge:</span>
-        <span><b>-</b></span>
-        <input id="chargeSlider" type="range" min="-1" max="1" step="0.1" value="1">
-        <span><b>+</b></span>
-        <div style="display:inline;" id="chargeVisDiv"></div>
-        <br>
-        <span>Mode:</span>
-        <span id="modeDisplay"></span>
-        <br>
-        <input id="animatedEquipotentialsButton" type="checkbox" checked="true">
-        <span>Toggle Animated Equipotentials</span>
-        <div id="controlsList">
+    <div id="compositeCanvasHolder"></div>
+    <div>
+        <div class="group">
+            <span>Charge:</span>
+            <span><b>-</b></span>
+            <input id="chargeSlider" type="range" min="-1" max="1" step="0.1" value="1">
+            <span><b>+</b></span>
+            <div style="display:inline;" id="chargeVisDiv"></div>
+            <br>
+            <span>Mode:</span>
+            <span id="modeDisplay"></span>
+            <br>
+            <input id="animatedEquipotentialsButton" type="checkbox" checked="true">
+            <span>Toggle Animated Equipotentials</span>
+        </div>
+        <div class="group">
             <p>Controls:</p>
             <ul>
                 <li>Click to draw charges surfaces with the selected charge</li>
-                <li>Press F to add a field line at mouse position</li>
+                <li>Press <b>F</b> to add a field line at mouse position</li>
                 <li>
-                    Press E to place or remove an emitter of particles with the selected charge at the mouse position
+                    Press <b>E</b> to place or remove an emitter of particles with the selected charge at the mouse position
                 </li>
-                <li>Press R to reload the page</li>
-                <li>Press 1 to set the selected charge to fully positive</li>
-                <li>Press 2 to set the selected charge to fully negative</li>
-                <li>Press 3 to go into erase mode</li>
+                <li>Press <b>R</b> to reload the page</li>
+                <li>Press <b>1</b> to set the selected charge to fully positive</li>
+                <li>Press <b>2</b> to set the selected charge to fully negative</li>
+                <li>Press <b>3</b> to go into erase mode</li>
             </ul>
         </div>
     </div>

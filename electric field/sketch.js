@@ -20,34 +20,34 @@ const downScaleDivisor = 10
 let cDraw, cPotential, cUpscalePotential, cPotentialVis, cEquipotentials, cField, cUpscaleField, cFieldVis, cFieldLines, cParticles, cChargeOutline, cComposite, cChargeVis = null
 function setup() {
     pixelDensity(1)
-    
+
     cDraw = createCanvas(800, 800)
-    cDraw.elt.style = "display:none;"
+    cDraw.elt.style = "display:none !important"
     cDraw.elt.setAttribute("willReadFrequently", "true")
     strokeWeight(20)
     noSmooth()
 
-    cPotential = createGraphics(width / downScaleDivisor, height / downScaleDivisor, WEBGL)
-    cUpscalePotential = createGraphics(width, height, WEBGL)
-    cPotentialVis = createGraphics(width, height, WEBGL)
-    cEquipotentials = createGraphics(width, height, WEBGL)
+    cPotential = createGraphics(width / downScaleDivisor, height / downScaleDivisor, WEBGL); cPotential.elt.style = "display:none !important;"
+    cUpscalePotential = createGraphics(width, height, WEBGL); cUpscalePotential.elt.style = "display:none !important;"
+    cPotentialVis = createGraphics(width, height, WEBGL); cPotentialVis.elt.style = "display:none !important;"
+    cEquipotentials = createGraphics(width, height, WEBGL); cEquipotentials.elt.style = "display:none !important;"
 
-    cField = createGraphics(width / downScaleDivisor, height / downScaleDivisor, WEBGL)
-    cUpscaleField = createGraphics(width, height, WEBGL)
+    cField = createGraphics(width / downScaleDivisor, height / downScaleDivisor, WEBGL); cField.elt.style = "display:none !important;"
+    cUpscaleField = createGraphics(width, height, WEBGL); cUpscaleField.elt.style = "display:none !important;"
     cUpscaleField.elt.setAttribute("willReadFrequently", "true")
-    // cFieldVis = createGraphics(width, height, WEBGL)
-    cFieldLines = createGraphics(width, height)
+    cFieldLines = createGraphics(width, height); cFieldLines.elt.style = "display:none !important;"
     cFieldLines.background(0)
     cFieldLines.stroke(255, 255, 0)
     cFieldLines.strokeWeight(2)
     cFieldLines.noFill()
 
-    cParticles = createGraphics(width, height)
+    cParticles = createGraphics(width, height); cParticles.elt.style = "display:none !important;"
     cParticles.noStroke()
 
-    cChargeOutline = createGraphics(width, height, WEBGL)
+    cChargeOutline = createGraphics(width, height, WEBGL); cChargeOutline.elt.style = "display:none !important;"
 
     cComposite = createGraphics(width, height)
+    cComposite.parent(document.getElementById("compositeCanvasHolder"))
     cComposite.elt.style = "display:block;"
 
     cChargeVis = createGraphics(20, 20)
@@ -65,8 +65,8 @@ let lastMouseX, lastMouseY = null
 let t = 0
 function draw() {
     // probably due to a bug from p5, this is fixing the mouse position being offset
-    rMouseX = mouseX - 20 + window.scrollX
-    rMouseY = mouseY - 20 + window.scrollY
+    rMouseX = mouseX + window.scrollX - 10
+    rMouseY = mouseY + window.scrollY - 10
 
     // update drawing color (charge) if needed
     const sliderValue = float(chargeSlider.value)
