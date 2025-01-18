@@ -41,7 +41,7 @@ fn nearEdge(pos: vec2i, radius: i32) -> bool {
 
     let hasEdge = min(v+vUp+vDown+vLeft+vRight, 1) == 1;
 
-    var col = vec3f(2, 35, 36)/255;
+    var col = vec3f(22, 23, 24)/255;
 
     var firstThickness = 1;
     var secondThickness = 2;
@@ -55,12 +55,12 @@ fn nearEdge(pos: vec2i, radius: i32) -> bool {
 
     if((f32(i.x)-padding)/(textureSize.x-2*padding) < u.transition){
         if (nearEdge(i, firstThickness)) {
-            col = vec3f(0, 1, 1);
+            col = vec3f(1, 1, 1);
         }
     }
     else {
         if (nearEdge(i, secondThickness)) {
-            col = vec3f(0, 1, 1);
+            col = vec3f(1, 1, 1);
         }
     }
 
