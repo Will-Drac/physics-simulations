@@ -18,7 +18,7 @@ async function start(device) {
     //     device
     // )
     let obstacleTexture = await loadTexture(
-        "obstacles new/absorbTest3.png",
+        "obstacles new/absorbTest5.png",
         device
     )
 
@@ -439,7 +439,7 @@ async function main(scene) {
         const emitComputePass = emitEncoder.beginComputePass()
         emitComputePass.setPipeline(emitPipeline)
         emitComputePass.setBindGroup(0, emitBindGroup)
-        emitComputePass.dispatchWorkgroups(1, 1, scene.numWavelengths) //hard set 5 emitters
+        emitComputePass.dispatchWorkgroups(50, 1, scene.numWavelengths) //hard set 5 emitters
         emitComputePass.end()
         const emitCommandBuffer = emitEncoder.finish()
         device.queue.submit([emitCommandBuffer])

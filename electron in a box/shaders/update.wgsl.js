@@ -3,10 +3,10 @@ export default /*wgsl*/ `
 @group(0) @binding(0) var outputTexture: texture_storage_2d<rg32float, write>;
 @group(0) @binding(1) var lastTexture: texture_2d<f32>;
 
-const Dt = 0.000000001;
+const Dt = 0.00000001;
 const hbar = 1.054e-34;
 const me = 9.109383e-31;
-const Ds = 0.00001;
+const Ds = 0.00003;
 
 fn multImaginary(v: vec2f) -> vec2f {
     return vec2f(-v.y, v.x);
@@ -14,7 +14,15 @@ fn multImaginary(v: vec2f) -> vec2f {
 
 fn V(pos: vec2f) -> f32 {
     // return 0.00000000000002*pos.y;
-    return 0;
+    // return 0;
+
+    // return exp(-(pow(pos.x-100, 2)/200+pow(pos.y-200/2, 2)/200))*4e-29;
+
+    return exp(-(pow(pos.x-100, 2)/200+pow(pos.y-200/2, 2)/200))*4e-29;
+
+    // return min(
+    //     0.4*1.6e-19*1.6e-19/sqrt((pos.x-100)*(pos.x-100)+(pos.y-100)*(pos.y-100))
+    // , 0.1);
 }
 
 @compute @workgroup_size(1) fn updateWave(
