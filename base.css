@@ -31,3 +31,23 @@ canvas {
 a {
     color: rgb(255, 96, 255);
 }
+input[type="text"], input[type="number"] {
+    border-radius: 5px;
+    border: solid 1px rgb(30, 31, 32);
+    padding: 5px;
+    background-color: rgb(12, 13, 14);
+    color: white;
+    width: 75px;
+    font-size: large;
+    text-align: center;
+}
+button {
+    border-radius: 5px;
+    border: solid 1px rgb(255, 255, 255);
+    padding: 5px;
+    background-color: rgb(16, 17, 19);
+    color: white;
+    font-size: large;
+    width: 100px;
+    height: 50px;
+}
