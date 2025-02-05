@@ -239,7 +239,7 @@ async function main() {
         for (let i = 0; i < 10; i++) {
 
             pulseTime += 0.0016
-            waveUniformsViews.startValue[0] = mouseDown ? cursor.y - canvas.clientHeight / 2 : 120 * Math.sin(2 * Math.PI * Math.min(pulseTime, 1))
+            waveUniformsViews.startValue[0] = mouseDown ? cursor.y - canvas.clientHeight / 2 : -120 * Math.sin(2 * Math.PI * Math.min(pulseTime, 0.5))
 
             iterations++
 
