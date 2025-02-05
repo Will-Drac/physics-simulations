@@ -6,7 +6,7 @@
     <title>Interference Visualization</title>
     <meta name="description" content="Visualizes interference from two point sources.">
     <script src="script.js" type="module"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../base.css">
 </head>
 <body>
     <canvas id="display" width="800" height="800"></canvas>
@@ -14,7 +14,7 @@
     <div id="controls">
         <p>Click and drag to move the speakers</p>
 
-        <div class="optionsCategory">
+        <div class="group">
             <h2 style="margin: 5px">Microphone</h2>
             <span>Position: </span><span id="micPosDisplay"></span><br>
             <button id="audioStart">Start</button>
@@ -24,13 +24,13 @@
             <input id="volumeInput" type="range" value="1" min="0" max="1" step="0.05">
         </div>
 
-        <div class="optionsCategory">
+        <div class="group">
             <h2 style="margin: 5px">Scale Controls</h2>
             <span>Simulation Width: </span><input id="widthScale" value="20"><span>m</span> <br>
             <span>Time Slowing: </span><input type="range" id="timeScale" value="0.3" max="1" min="0" step="0.001"><span id="timeScaleDisplay"></span><br>
         </div>
 
-        <div class="optionsCategory">
+        <div class="group">
             <h2 style="margin: 5px">Display Options</h2>
             <span>Display Mode:</span>
             <select id="displaySelect">
@@ -41,14 +41,14 @@
             </select>
         </div>
 
-        <div class="optionsCategory">
+        <div class="group">
             <h2 style="margin: 5px">Speaker 1</h2>
             <span>Position: </span><span id="e1PosDisplay"></span><br>
             <span>Frequency: </span><input id="e1Frequency" type="number" value="200" min="20" max="2000"><span>Hz</span><br>
             <span>Phase Offset: </span><input id="e1PhaseOffset" type="number" value="0"><span>π</span><br>
         </div>
 
-        <div class="optionsCategory">
+        <div class="group">
             <h2 style="margin: 5px">Speaker 2</h2>
             <span>Position: </span><span id="e2PosDisplay"></span><br>
             <span>Frequency: </span><input id="e2Frequency" type="number" value="200" min="20" max="2000"><span>Hz</span><br>
