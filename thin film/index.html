@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Thin Film Visualization</title>
+    <meta name="description" content="Visualizing what goes on in a thin film, and how it makes such pretty colours.">
+
+    <link rel="stylesheet" type="text/css" href="../base.css">
+    <style>
+        canvas {
+            margin: 5px;
+        }
+    </style>
+
+    <script src="libraries/p5.min.js"></script>
+    <script src="libraries/p5.sound.min.js"></script>
+  </head>
+
+  <body>
+    <script src="sketch.js" defer></script>
+
+    <div id="canvasHolder"></div>
+
+    <div class="group">
+        <h2>Controls</h2>
+        <span>Wavelength: </span><input type="number" id="wavelengthInput" max="700" min="400" value="550" step="5"><span>nm</span>
+        <br>
+        <span>Film Thickness: </span><input type="number" id="thicknessInput" max="700" min="0" value="500" step="15"><span>nm</span>
+        <br>
+        <span>Film Index of Refraction</span><input type="number" id="ior1Input" max="2" min="1" step="0.1" value="1.1">
+        <br>
+        <span>Index of Refraction Above Film</span><input type="number" id="ior3Input" max="2" min="1" step="0.1" value="1">
+        <br>
+        <span>Index of Refraction Under Film</span><input type="number" id="ior2Input" max="2" min="1" step="0.1" value="1.5">
+    </div>
+
+
+    <div class="group" style="width: 815px;">
+        <p>Graph of light intensity as a function of wavelength:</p>
+        <div id="graphHolder"></div>
+        <span>Total colour of the film: </span>
+        <br>
+        <p id="colorDisplay"></p>
+    </div>
+
+
+  </body>
+</html>
