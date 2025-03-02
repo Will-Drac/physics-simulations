@@ -1,4 +1,4 @@
-import emitCode from "./shaders/emit.wgsl.js"
+import emitterTemplate from "./shaders/emitterTemplate.wgsl.js"
 import computeBoundariesCode from "./shaders/computeBoundaries.wgsl.js"
 import obstaclesDisplayCode from "./shaders/obstaclesDisplay.wgsl.js"
 import updateBoundaryCode from "./shaders/updateBoundary.wgsl.js"
@@ -7,18 +7,134 @@ import colorCode from "./shaders/color.wgsl.js"
 import waveDisplayCode from "./shaders/waveDisplay.wgsl.js"
 import renderCode from "./shaders/renderWave.wgsl.js"
 
+
+
 let shouldStop = false
 document.getElementById("startButton").addEventListener("click", function () {
     shouldStop = true
 })
 
+
+
+class Emitter {
+    constructor() {
+        this.pos = { x: 300, y: 300 } //in the case of an area emitter, this is the center
+        this.col = { r: 255, g: 255, b: 255 }
+        this.type = "Point"
+        this.size = 0 // if you have an area emitter that emits along 15 pixels, this will be (15-1)/2 = 7
+        this.direction = { x: 1, y: 0 } //for area emitters, a unit vector that points from one end to the other
+    }
+}
+
+let emitters = []
+
+document.getElementById("addEmitter").addEventListener("click", function () {
+    emitters.push(new Emitter())
+
+    compileEmitterShaders()
+    updateEmittersHTML()
+})
+
+function updateEmittersHTML() {
+    const div = document.getElementById("emitters")
+    div.innerHTML = ""
+
+    for (let i = 0; i < emitters.length; i++) {
+        const container = document.createElement("div")
+        container.classList.add("emitterContainer")
+        div.append(container)
+
+        function rgbToHex(r, g, b) {
+            r = Math.round(r * 255)
+            g = Math.round(g * 255)
+            b = Math.round(b * 255)
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+        }
+        const color = document.createElement("input")
+        color.type = "color"
+        color.value = rgbToHex(emitters[i].col.r, emitters[i].col.g, emitters[i].col.b)
+        container.append(color)
+
+        color.addEventListener("input", function (e) {
+            function hexToRgb(hex) {
+                let r = 0, g = 0, b = 0
+                if (hex.length == 4) {
+                    r = parseInt(hex[1] + hex[1], 16)
+                    g = parseInt(hex[2] + hex[2], 16)
+                    b = parseInt(hex[3] + hex[3], 16)
+                } else if (hex.length == 7) {
+                    r = parseInt(hex[1] + hex[2], 16)
+                    g = parseInt(hex[3] + hex[4], 16)
+                    b = parseInt(hex[5] + hex[6], 16)
+                }
+                return { r: r / 255, g: g / 255, b: b / 255 }
+            }
+
+            const rgb = hexToRgb(e.target.value)
+            emitters[i].col = rgb
+
+            compileEmitterShaders()
+        })
+
+        const type = document.createElement("select")
+        container.append(type)
+
+        const typePoint = document.createElement("option")
+        typePoint.innerText = "Point"
+        type.append(typePoint)
+
+        const typeArea = document.createElement("option")
+        typeArea.innerText = "Area"
+        type.append(typeArea)
+
+        type.value = emitters[i].type
+
+        type.addEventListener("input", function (e) {
+            emitters[i].type = e.target.value
+
+            if (e.target.value == "Point") {
+                emitters[i].size = 0
+            }
+            else if (e.target.value == "Area") {
+                emitters[i].size = 25
+            }
+
+            compileEmitterShaders()
+        })
+
+        const remove = document.createElement("span")
+        remove.style = "background: rgb(40, 50, 50); color: white; padding: 5px; border-radius: 5px;"
+        remove.innerText = "Remove"
+        container.append(remove)
+
+        remove.addEventListener("click", function () {
+            emitters.splice(i, 1)
+            compileEmitterShaders()
+            updateEmittersHTML()
+        })
+    }
+}
+
+let emittersCode = []
+function compileEmitterShaders() {
+    emittersCode = []
+    for (let i = 0; i < emitters.length; i++) {
+        let e = emitters[i]
+        let c = emitterTemplate
+
+        c = c.replaceAll("_POS", `${e.pos.x}, ${e.pos.y}`)
+        c = c.replaceAll("_DIRVEC", `${e.direction.x}, ${e.direction.y}`)
+        c = c.replaceAll("_SIZE", e.size)
+
+        emittersCode.push({ code: c, numPixels: 2 * e.size + 1 })
+    }
+}
+
+
+
 async function start(device) {
-    // let obstacleTexture = await loadTexture(
-    //     document.getElementById("obstacleSelect").value,
-    //     device
-    // )
     let obstacleTexture = await loadTexture(
-        "obstacles new/absorbTest5.png",
+        document.getElementById("obstacleSelect").value,
         device
     )
 
@@ -27,21 +143,8 @@ async function start(device) {
         device
     )
 
-    // let emitterType = document.getElementById("emitterSelect").value
-    // let emitterCode = ""
-    // if (emitterType == "point") {
-    //     emitterCode = `else if (i.x==300 && i.y==1) {`
-    // }
-    // else if (emitterType == "direction") {
-    //     emitterCode = `else if (i.y==1) {`
-    // }
-    // else if (emitterType == "center") {
-    //     emitterCode = `else if (i.y == 300 && i.x == 300) {`
-    // }
-    let emitterCode = ""
-
     let numWavelengths = Number(document.getElementById("numWavelengths").value)
-    main({ obstacleTexture, iorTexture, emitterCode, numWavelengths })
+    main({ obstacleTexture, iorTexture, emittersCode, numWavelengths })
 }
 
 // a function to load an external image as a texture
@@ -74,6 +177,7 @@ async function loadTexture(url, device) {
 }
 
 let device; let canvas; let context; let presentationFormat
+// runs once when the page is first opened
 async function setup() {
     // set up the device (gpu)
     const adapter = await navigator.gpu?.requestAdapter()
@@ -207,57 +311,31 @@ async function main(scene) {
 
     // -----------------emit setup----------------- //
 
-    const emitModule = device.createShaderModule({
-        label: "light emit shader module",
-        code:
-            emitCode
-                .replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
-    })
+    let emittersSetup = []
+    for (let i = 0; i < emittersCode.length; i++) {
+        const module = device.createShaderModule({
+            label: `module for emitter ${i}`,
+            code: emittersCode[i].code.replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
+        })
 
-    const emitPipeline = device.createComputePipeline({
-        label: "emit pipeline",
-        layout: "auto",
-        compute: { module: emitModule }
-    })
+        const pipeline = device.createComputePipeline({
+            label: `pipeline for emitter ${i}`,
+            layout: "auto",
+            compute: { module }
+        })
 
-    // !emitter controls still missing
-    const emitUniformsBuffer = device.createBuffer({
-        size: 176,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-    })
-    const emitUniformsValues = new ArrayBuffer(176)
-    const emitUniformsViews = {
-        time: new Float32Array(emitUniformsValues, 0, 1),
-        emitters: [
-            {
-                kind: new Int32Array(emitUniformsValues, 16, 1),
-                posOrDir: new Float32Array(emitUniformsValues, 24, 2),
-                col: new Float32Array(emitUniformsValues, 32, 3),
-            },
-            {
-                kind: new Int32Array(emitUniformsValues, 48, 1),
-                posOrDir: new Float32Array(emitUniformsValues, 56, 2),
-                col: new Float32Array(emitUniformsValues, 64, 3),
-            },
-            {
-                kind: new Int32Array(emitUniformsValues, 80, 1),
-                posOrDir: new Float32Array(emitUniformsValues, 88, 2),
-                col: new Float32Array(emitUniformsValues, 96, 3),
-            },
-            {
-                kind: new Int32Array(emitUniformsValues, 112, 1),
-                posOrDir: new Float32Array(emitUniformsValues, 120, 2),
-                col: new Float32Array(emitUniformsValues, 128, 3),
-            },
-            {
-                kind: new Int32Array(emitUniformsValues, 144, 1),
-                posOrDir: new Float32Array(emitUniformsValues, 152, 2),
-                col: new Float32Array(emitUniformsValues, 160, 3),
-            },
-        ],
+        emittersSetup.push({ module, pipeline, numPixels:emittersCode[i].numPixels })
     }
 
-    // setting the initial values of the uniforms
+    const emitUniformsBuffer = device.createBuffer({
+        size: 4,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+    const emitUniformsValues = new ArrayBuffer(4)
+    const emitUniformsViews = {
+        time: new Float32Array(emitUniformsValues, 0, 1),
+    }
+
     emitUniformsViews.time[0] = 0
 
     // bind group set later
@@ -267,7 +345,7 @@ async function main(scene) {
 
     const updateBoundaryModule = device.createShaderModule({
         label: "update boundary texels module",
-        code: 
+        code:
             updateBoundaryCode
                 .replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
     })
@@ -290,10 +368,10 @@ async function main(scene) {
         // .replace("_EMITTER", scene.emitterCode)
     })
 
-    const updatePipeline = device.createComputePipeline({ //this is going to be a compute pipeline because i'm not rendering an image, but instead using the gpu to compute a bunch of values (outputting a bunch of floats formatted in a texture because it's easy)
+    const updatePipeline = device.createComputePipeline({
         label: "wave update pipeline",
         layout: "auto",
-        compute: { module: updateModule } //use the code for updating
+        compute: { module: updateModule }
     })
 
     // bind group set later
@@ -343,7 +421,7 @@ async function main(scene) {
         compute: { module: waveDisplay }
     })
 
-    const waveDisplayTexture = device.createTexture({ // <- this texture will be what the user will see
+    const waveDisplayTexture = device.createTexture({
         label: "transcribed wave texture to an rgba8unorm texture",
         format: "rgba8unorm",
         dimension: "2d",
@@ -359,13 +437,13 @@ async function main(scene) {
         code: renderCode
     })
 
-    const renderPipeline = device.createRenderPipeline({ //notice it's not a compute pipeline anymore
+    const renderPipeline = device.createRenderPipeline({
         label: "wave render pipeline",
         layout: "auto",
-        vertex: { //needs vertex information (which will just be two triangles that cover the whole screen)
+        vertex: {
             module: renderModule
         },
-        fragment: { //and fragment information (what to draw on those triangles)
+        fragment: {
             module: renderModule,
             targets: [{ format: presentationFormat }]
         }
@@ -379,11 +457,9 @@ async function main(scene) {
     const renderUniformsViews = {
         renderMode: new Int32Array(renderUniformsValues),
     }
-    // setting the initial values of the uniforms
+
     renderUniformsViews.renderMode[0] = 1
 
-    // for the other shaders, the bind group is set each frame because it changes. this one can just be done once at the beginning
-    // this is what the gpu gets sent from the cpu
     const renderBindGroup = device.createBindGroup({
         layout: renderPipeline.getBindGroupLayout(0),
         entries: [
@@ -401,7 +477,7 @@ async function main(scene) {
         colorAttachments: [
             {
                 // view: <- to be filled out when we render (it's what we render to)
-                clearValue: [0.3, 0.3, 0.3, 1], //these are just kinda defaults that make the render pass act as you would expect
+                clearValue: [0.3, 0.3, 0.3, 1],
                 loadOp: "clear",
                 storeOp: "store"
             }
@@ -411,7 +487,7 @@ async function main(scene) {
 
 
     let frameCount = 0
-    async function render() { // this gets called each frame
+    async function render() {
         if (shouldStop) {
             shouldStop = false
             await start(device)
@@ -424,25 +500,28 @@ async function main(scene) {
         // -----------------emit stuff----------------- //
 
         emitUniformsViews.time[0] = frameCount
-        device.queue.writeBuffer(emitUniformsBuffer, 0, emitUniformsValues) //<- update the buffer object
+        device.queue.writeBuffer(emitUniformsBuffer, 0, emitUniformsValues)
 
-        const emitBindGroup = device.createBindGroup({
-            layout: emitPipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: waveTextures[lastUpdatedTexture].createView() },
-                { binding: 1, resource: iorTexture.createView() },
-                { binding: 2, resource: { buffer: emitUniformsBuffer } }
-            ]
-        })
+        for (let i = 0; i < emittersSetup.length; i++) {
+            const emitBindGroup = device.createBindGroup({
+                layout: emittersSetup[i].pipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: waveTextures[lastUpdatedTexture].createView() },
+                    { binding: 1, resource: iorTexture.createView() },
+                    { binding: 2, resource: { buffer: emitUniformsBuffer } }
+                ]
+            })
 
-        const emitEncoder = device.createCommandEncoder()
-        const emitComputePass = emitEncoder.beginComputePass()
-        emitComputePass.setPipeline(emitPipeline)
-        emitComputePass.setBindGroup(0, emitBindGroup)
-        emitComputePass.dispatchWorkgroups(50, 1, scene.numWavelengths) //hard set 5 emitters
-        emitComputePass.end()
-        const emitCommandBuffer = emitEncoder.finish()
-        device.queue.submit([emitCommandBuffer])
+            const emitEncoder = device.createCommandEncoder()
+            const emitComputePass = emitEncoder.beginComputePass()
+            emitComputePass.setPipeline(emittersSetup[i].pipeline)
+            emitComputePass.setBindGroup(0, emitBindGroup)
+            emitComputePass.dispatchWorkgroups(emittersSetup[i].numPixels, 1, scene.numWavelengths)
+            emitComputePass.end()
+            const emitCommandBuffer = emitEncoder.finish()
+            device.queue.submit([emitCommandBuffer])
+        }
+
 
         // -----------------update boundary stuff----------------- //
         const updateBoundaryBindGroup = device.createBindGroup({
@@ -451,7 +530,7 @@ async function main(scene) {
                 { binding: 0, resource: waveTextures[lastUpdatedTexture].createView() }, //we're editing the last texture
                 { binding: 1, resource: waveTextures[(lastUpdatedTexture + 2) % 3].createView() }, //with the help of the before-last texture
                 { binding: 2, resource: boundariesTexture.createView() },
-                {binding: 3, resource: obstaclesTexture.createView()} //has the color of the boundary
+                { binding: 3, resource: obstaclesTexture.createView() } //has the color of the boundary
             ]
         })
 
@@ -488,11 +567,9 @@ async function main(scene) {
         updateComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight, scene.numWavelengths) //make each pixel be dealt with by its own thread (that's what makes the gpu so powerful) (technically a workgroup can be multiple threads, but in gpu code I say it's just one)
         updateComputePass.end()
         const updateCommandBuffer = updateEncoder.finish()
-        device.queue.submit([updateCommandBuffer]) //actually makes the gpu run code
+        device.queue.submit([updateCommandBuffer])
 
-        // at this point, the most recent texture has been successfully updated
-
-        lastUpdatedTexture = (lastUpdatedTexture + 1) % 3 //a new texture has just been updated
+        lastUpdatedTexture = (lastUpdatedTexture + 1) % 3
 
         // -----------------color stuff-----------------
         colorUniformsViews.brightness[0] = Math.pow(10, document.getElementById("brightness").value)
@@ -574,7 +651,6 @@ async function main(scene) {
 TODO:
 
 figure out what's going on with dx dy ds and that weird constant at the wavelength calculation
-implement color in boundaries
 multiple emitters, coloured, and movable?
 redo all obstacle textures with the new way
 redo ior textures to be smooth (maybe that helps)

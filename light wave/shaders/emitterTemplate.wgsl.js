@@ -1,14 +1,7 @@
 export default /*wgsl*/ `
 
-struct emitter {
-    kind: i32, //0: nothing, 1: point, 2: directional
-    posOrDir: vec2f,
-    col: vec3f
-}
-
 struct uniforms {
-    time: f32,
-    emitters: array<emitter, 5>
+    time: f32
 }
 
 @group(0) @binding(0) var outputTexture: texture_storage_3d<rg32float, write>;
@@ -29,7 +22,11 @@ const dt = 0.000000000004;
     let frequency = c / (wavelength*ior);
     let t = u.time * dt;
     let theta = u.time * dt * 6.28 * frequency; //gives the wave the wavelength i want
-    textureStore(outputTexture, vec3u(id.x, 2*id.x, id.z)+vec3u(300, 1, 0), vec4f(sin(theta), cos(theta), 0, 0));
+
+    let thisPos = vec3u(vec3f(_DIRVEC, 0) * (f32(id.x - _SIZE))) + vec3u(_POS, id.z);
+    let brightnessPerPixel = 1 / (2*f32(_SIZE) + 1); //!why is this not right
+    // * make it emit at different intensity depending on the colour of the emitter and the wavelength
+    textureStore(outputTexture, thisPos, brightnessPerPixel*vec4f(sin(theta), cos(theta), 0, 0));
 }
 
 `

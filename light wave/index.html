@@ -29,21 +29,14 @@
         <div id="divControl">
             <div id="controlTop">
                 <h2 class="controlTitle">Setup Options</h2>
+
                 <h3>Obstacle Texture</h3>
                 <select id="obstacleSelect">
-                    <option value="obstacles/none.png">None</option>
-                    <option value="obstacles/doubleSlit.png">Double Slit</option>
-                    <option value="obstacles/singleSlit.png">Single Slit</option>
-                    <option value="obstacles/ellipse.png">Ellipse</option>
-                    <option value="obstacles/flashlight.png">Flashlight</option>
-                    <option value="obstacles/fractal.png">Fractal</option>
-                    <option value="obstacles/maze.png">Maze</option>
-                    <option value="obstacles/mirror.png">Mirror</option>
-                    <option value="obstacles/parabolic.png">Parabolic</option>
-                    <option value="obstacles/obstacles.png">Obstacles</option>
-                    <option value="obstacles/rocks.png">Rocks</option>
-                    <option value="obstacles/grating.png">Grating</option>
+                    <option value="obstacles/absorbTest.png">Test 1</option>
+                    <option value="obstacles/absorbTest2.png">Test 2</option>
+                    <option value="obstacles/absorbTest4.png">Test 4</option>
                 </select>
+
                 <h3>Refraction Texture</h3>
                 <select id="IORSelect">
                     <option value="ior/none.png">None</option>
@@ -54,15 +47,20 @@
                     <option value="ior/water.png">Water</option>
                     <option value="ior/gradient.png">Gradient</option>
                 </select>
+
                 <h3>Emitter Options</h3>
-                <select id="emitterSelect">
+                <!-- <select id="emitterSelect">
                     <option value="point">Single Source</option>
                     <option value="direction">Direction Source</option>
                     <option value="center">Center Source</option>
-                </select>
+                </select> -->
+                <button id="addEmitter">Add Emitter</button>
+                <div id="emitters"></div>
+
                 <h3>Number of Wavelengths</h3>
                 <span id="waveLengthDisplay">4</span><input type="range" min="1" max="75" step="1" value="4" id="numWavelengths" oninput="document.getElementById('waveLengthDisplay').innerHTML = document.getElementById('numWavelengths').value">
-                <button id="startButton"><b style="text-shadow: 2px 2px 5px black;;">RESET</b></button>
+                <button id="startButton"><b style="text-shadow: 2px 2px 5px black;" class="bigButton">RESET</b></button>
+
             </div>
             <div id="controlMiddle">
                 <h2 class="controlTitle">Real Time Settings</h2>
@@ -83,5 +81,3 @@
 </body>
 
 </html>
-
-<!-- on to script.js -->
