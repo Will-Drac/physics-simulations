@@ -36,6 +36,7 @@ struct uniforms {
 @group(0) @binding(2) var linearSampler: sampler;
 @group(0) @binding(3) var obstacleDisplayTexture: texture_2d<f32>;
 @group(0) @binding(4) var iorTexture: texture_2d<f32>;
+@group(0) @binding(5) var iconsTexture: texture_2d<f32>;
 @group(0) @binding(6) var<uniform> u: uniforms;
 
 fn alphaMix(colTop: vec4f, colBottom: vec4f) -> vec4f {
@@ -47,13 +48,14 @@ fn alphaMix(colTop: vec4f, colBottom: vec4f) -> vec4f {
     let obstacle = textureSample(obstacleDisplayTexture, linearSampler, i.uv);
     let ior = textureSample(iorTexture, linearSampler, i.uv);
     let lightColor = textureSample(colorTexture, linearSampler, i.uv);
+    let icon = textureSample(iconsTexture, linearSampler, i.uv);
 
     if (u.renderMode == 0) {
-        return alphaMix(obstacle, wave+ior-vec4f(0.5,0.5,0.5,0));
+        return alphaMix(icon, alphaMix(obstacle, wave+ior-vec4f(0.5,0.5,0.5,0)));
     }
     else {
         let iorCol = ior-vec4f(0.5,0.5,0.5,0);
-        return alphaMix(obstacle, lightColor+iorCol*iorCol*iorCol);
+        return alphaMix(icon, alphaMix(obstacle, lightColor+iorCol*iorCol*iorCol));
     }
 }
 

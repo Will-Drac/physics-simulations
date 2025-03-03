@@ -18,11 +18,30 @@ document.getElementById("startButton").addEventListener("click", function () {
 
 class Emitter {
     constructor() {
-        this.pos = { x: 300, y: 300 } //in the case of an area emitter, this is the center
-        this.col = { r: 255, g: 255, b: 255 }
+        this.pos = { x: 300, y: 300, grabbed: false } //in the case of an area emitter, this is the center
+        this.posA = { x: 300, y: 300, grabbed: false }
+        this.posB = { x: 300, y: 300, grabbed: false }
+        this.col = { r: 1, g: 1, b: 1 }
         this.type = "Point"
         this.size = 0 // if you have an area emitter that emits along 15 pixels, this will be (15-1)/2 = 7
         this.direction = { x: 1, y: 0 } //for area emitters, a unit vector that points from one end to the other
+    }
+
+    // sets pos, size, and direction from posA and posB
+    updateFromAB() {
+        this.pos = {
+            x: (this.posA.x + this.posB.x) / 2,
+            y: (this.posA.y + this.posB.y) / 2
+        }
+
+        const distAB = Math.sqrt((this.posA.x - this.posB.x) ** 2 + (this.posA.y - this.posB.y) ** 2)
+
+        this.size = (distAB / 2) - 1
+
+        this.direction = {
+            x: (this.posB.x - this.posA.x) / distAB,
+            y: (this.posB.y - this.posA.y) / distAB
+        }
     }
 }
 
@@ -31,7 +50,6 @@ let emitters = []
 document.getElementById("addEmitter").addEventListener("click", function () {
     emitters.push(new Emitter())
 
-    compileEmitterShaders()
     updateEmittersHTML()
 })
 
@@ -72,8 +90,6 @@ function updateEmittersHTML() {
 
             const rgb = hexToRgb(e.target.value)
             emitters[i].col = rgb
-
-            compileEmitterShaders()
         })
 
         const type = document.createElement("select")
@@ -90,16 +106,25 @@ function updateEmittersHTML() {
         type.value = emitters[i].type
 
         type.addEventListener("input", function (e) {
-            emitters[i].type = e.target.value
+            const E = emitters[i]
+            E.type = e.target.value
 
             if (e.target.value == "Point") {
-                emitters[i].size = 0
+                E.size = 0
             }
             else if (e.target.value == "Area") {
-                emitters[i].size = 25
+                E.size = 25
+                E.posA = {
+                    x: E.pos.x - E.size * E.direction.x,
+                    y: E.pos.y - E.size * E.direction.y,
+                    grabbed: false
+                }
+                E.posB = {
+                    x: E.pos.x + E.size * E.direction.x,
+                    y: E.pos.y + E.size * E.direction.y,
+                    grabbed: false
+                }
             }
-
-            compileEmitterShaders()
         })
 
         const remove = document.createElement("span")
@@ -109,43 +134,124 @@ function updateEmittersHTML() {
 
         remove.addEventListener("click", function () {
             emitters.splice(i, 1)
-            compileEmitterShaders()
             updateEmittersHTML()
         })
     }
 }
 
-let emittersCode = []
 function compileEmitterShaders() {
-    emittersCode = []
+    let emittersCode = []
     for (let i = 0; i < emitters.length; i++) {
         let e = emitters[i]
         let c = emitterTemplate
 
-        c = c.replaceAll("_POS", `${e.pos.x}, ${e.pos.y}`)
+        c = c.replaceAll("_POS", `${Math.floor(e.pos.x)}, ${Math.floor(e.pos.y)}`)
         c = c.replaceAll("_DIRVEC", `${e.direction.x}, ${e.direction.y}`)
         c = c.replaceAll("_SIZE", e.size)
+        c = c.replaceAll("_COL", `vec3f(${e.col.r}, ${e.col.g}, ${e.col.b})`)
 
         emittersCode.push({ code: c, numPixels: 2 * e.size + 1 })
     }
+
+    return emittersCode
 }
 
+// draws the emitters to the icons canvas
+function updateIconsCanvas() {
+    iCtx.clearRect(0, 0, iconsCanvas.width, iconsCanvas.height)
 
+    for (let e of emitters) {
+        if (e.type == "Point") {
+            iCtx.beginPath()
+            iCtx.arc(e.pos.x, e.pos.y, 7, 0, 2 * Math.PI)
+            iCtx.fillStyle = `rgb(${e.col.r * 255}, ${e.col.g * 255}, ${e.col.b * 255})`
+            iCtx.fill()
 
-async function start(device) {
-    let obstacleTexture = await loadTexture(
-        document.getElementById("obstacleSelect").value,
-        device
-    )
+            iCtx.strokeStyle = "rgb(0, 0, 0)"
+            iCtx.lineWidth = 2
+            iCtx.stroke()
+        }
+        else if (e.type == "Area") {
+            iCtx.beginPath()
+            iCtx.moveTo(e.pos.x - e.direction.x * e.size, e.pos.y - e.direction.y * e.size)
+            iCtx.lineTo(e.pos.x + e.direction.x * e.size, e.pos.y + e.direction.y * e.size)
+            iCtx.strokeStyle = `rgb(${e.col.r * 255}, ${e.col.g * 255}, ${e.col.b * 255})`
+            iCtx.lineWidth = 4
+            iCtx.lineCap = "round"
+            iCtx.stroke()
 
-    let iorTexture = await loadTexture(
-        document.getElementById("IORSelect").value,
-        device
-    )
+            iCtx.fillStyle = `rgb(${e.col.r * 255}, ${e.col.g * 255}, ${e.col.b * 255})`
+            iCtx.strokeStyle = "rgb(0, 0, 0)"
+            iCtx.lineWidth = 2
 
-    let numWavelengths = Number(document.getElementById("numWavelengths").value)
-    main({ obstacleTexture, iorTexture, emittersCode, numWavelengths })
+            iCtx.beginPath()
+            iCtx.arc(e.posA.x, e.posA.y, 7, 0, 2 * Math.PI)
+            iCtx.fill()
+            iCtx.stroke()
+
+            iCtx.beginPath()
+            iCtx.arc(e.posB.x, e.posB.y, 7, 0, 2 * Math.PI)
+            iCtx.fill()
+            iCtx.stroke()
+        }
+    }
 }
+
+function clamp(v, min, max) {
+    return Math.min(Math.max(v, min), max)
+}
+function handleIconsDragging(event) {
+    const canvasBounds = canvas.getBoundingClientRect()
+    cursor = {
+        x: event.clientX - canvasBounds.left - 10,
+        y: event.clientY - canvasBounds.top - 10 //!10 is for the border width
+    }
+
+    for (let e of emitters) {
+        if (e.type == "Point") {
+            if (e.pos.grabbed) {
+                e.pos.x = clamp(cursor.x, 0, canvas.clientWidth)
+                e.pos.y = clamp(cursor.y, 0, canvas.clientHeight)
+            }
+        }
+
+        else if (e.type == "Area") {
+            if (e.posA.grabbed) {
+                e.posA.x = clamp(cursor.x, 0, canvas.clientWidth)
+                e.posA.y = clamp(cursor.y, 0, canvas.clientHeight)
+                e.updateFromAB()
+            }
+            else if (e.posB.grabbed) {
+                e.posB.x = clamp(cursor.x, 0, canvas.clientWidth)
+                e.posB.y = clamp(cursor.y, 0, canvas.clientHeight)
+                e.updateFromAB()
+            }
+        }
+    }
+}
+
+function handleMouseDown(event) {
+    for (let e of emitters) {
+        if (e.type == "Point") {
+            if ((cursor.x - e.pos.x) ** 2 + (cursor.y - e.pos.y) ** 2 < 40) {
+                e.pos.grabbed = true
+                break
+            }
+        }
+
+        else if (e.type == "Area") {
+            if ((cursor.x - e.posA.x) ** 2 + (cursor.y - e.posA.y) ** 2 < 40) {
+                e.posA.grabbed = true
+                break
+            }
+            else if ((cursor.x - e.posB.x) ** 2 + (cursor.y - e.posB.y) ** 2 < 40) {
+                e.posB.grabbed = true
+                break
+            }
+        }
+    }
+}
+
 
 // a function to load an external image as a texture
 async function loadTexture(url, device) {
@@ -176,7 +282,9 @@ async function loadTexture(url, device) {
     return texture
 }
 
-let device; let canvas; let context; let presentationFormat
+
+
+let device; let canvas; let context; let presentationFormat; let iconsCanvas; let iCtx; let cursor = { x: 0, y: 0 }
 // runs once when the page is first opened
 async function setup() {
     // set up the device (gpu)
@@ -198,10 +306,41 @@ async function setup() {
         format: presentationFormat,
     })
 
+
+
+    iconsCanvas = new OffscreenCanvas(canvas.clientWidth, canvas.clientHeight)
+    iCtx = iconsCanvas.getContext("2d")
+
+
+    canvas.addEventListener("mousemove", handleIconsDragging)
+    canvas.addEventListener("mousedown", handleMouseDown)
+    canvas.addEventListener("mouseup", function (e) {
+        for (let e of emitters) { e.pos.grabbed = false; e.posA.grabbed = false; e.posB.grabbed = false }
+    })
+
     start(device)
 }
 setup()
 
+
+// sets everything up to run the simulation
+async function start(device) {
+    let obstacleTexture = await loadTexture(
+        document.getElementById("obstacleSelect").value,
+        device
+    )
+
+    let iorTexture = await loadTexture(
+        document.getElementById("IORSelect").value,
+        device
+    )
+
+    let numWavelengths = Number(document.getElementById("numWavelengths").value)
+    main({ obstacleTexture, iorTexture, emitterCode: compileEmitterShaders(), numWavelengths })
+}
+
+
+// runs the simulation
 async function main(scene) {
     // Tells the fragment shader how to sample images. This blends pixels linearly and repeats the image for values out of the bounds of [0, 1]
     const linearSampler = device.createSampler({
@@ -217,6 +356,23 @@ async function main(scene) {
 
     const obstaclesTexture = scene.obstacleTexture
     const iorTexture = scene.iorTexture
+
+    const iconsTexture = device.createTexture({
+        label: "texture showing where the emitters are",
+        format: "rgba8unorm",
+        size: [canvas.clientWidth, canvas.clientHeight],
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST
+    })
+    function updateIconsTexture() {
+        const bitmap = iconsCanvas.transferToImageBitmap()
+        device.queue.copyExternalImageToTexture(
+            { source: bitmap },
+            { texture: iconsTexture },
+            [canvas.clientWidth, canvas.clientHeight]
+        )
+    }
+
+
 
     // to do the simulation (to approximate a second derivative), I need to store 3 frames: this one, the last one, and the before-last one
     // so I have an array of 3 and cycle through them, keeping track of which is the most recent
@@ -312,10 +468,10 @@ async function main(scene) {
     // -----------------emit setup----------------- //
 
     let emittersSetup = []
-    for (let i = 0; i < emittersCode.length; i++) {
+    for (let i = 0; i < scene.emitterCode.length; i++) {
         const module = device.createShaderModule({
             label: `module for emitter ${i}`,
-            code: emittersCode[i].code.replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
+            code: scene.emitterCode[i].code.replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
         })
 
         const pipeline = device.createComputePipeline({
@@ -324,7 +480,7 @@ async function main(scene) {
             compute: { module }
         })
 
-        emittersSetup.push({ module, pipeline, numPixels:emittersCode[i].numPixels })
+        emittersSetup.push({ module, pipeline, numPixels: scene.emitterCode[i].numPixels })
     }
 
     const emitUniformsBuffer = device.createBuffer({
@@ -468,6 +624,7 @@ async function main(scene) {
             { binding: 2, resource: linearSampler }, //<- a sampler, telling the shader how to sample the texture
             { binding: 3, resource: obstacleDisplayTexture.createView() }, //<- the texture containing the obstacles, because I want to overlay the obstacles on top of the wave
             { binding: 4, resource: iorTexture.createView() },
+            { binding: 5, resource: iconsTexture.createView() },
             { binding: 6, resource: { buffer: renderUniformsBuffer } },
         ]
     })
@@ -616,6 +773,9 @@ async function main(scene) {
         device.queue.submit([waveDisplayCommandBuffer])
 
         // -----------------render stuff----------------- //
+        updateIconsCanvas()
+        updateIconsTexture()
+
         renderPassDescriptor.colorAttachments[0].view = context.getCurrentTexture().createView() //set the target of the shader to be the canvas
 
         const renderMode = document.getElementById("renderSelect").value

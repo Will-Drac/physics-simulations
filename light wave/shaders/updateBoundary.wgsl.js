@@ -87,6 +87,7 @@ fn saturationToSpectrumStretch(sat: f32) -> f32 {
     return pow(sat/0.7, 8.6) + sat/0.7;
 }
 
+// how much of this wavelength is reflected considering the color of the surface
 fn reflectionSpectrum(color: vec3f, wavelength: f32) -> f32 {
     let hsv = rgbToHsv(color);
     let mainWavelength = hueToWavelength(hsv.x);
