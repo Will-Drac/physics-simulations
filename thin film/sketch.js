@@ -1,5 +1,6 @@
 let downCanvas
 let upCanvas
+let sumCanvas
 let graphCanvas
 
 const c = 75 //speed of light (nm/s)
@@ -33,11 +34,29 @@ function setup() {
 
     downCanvas = createGraphics(400, 600)
     upCanvas = createGraphics(400, 600)
+    sumCanvas = createGraphics(400, 600)
 
     graphCanvas = createGraphics(800, 400)
 
-    const canvasHolder = document.getElementById("canvasHolder")
-    canvasHolder.append(downCanvas.elt); canvasHolder.append(upCanvas.elt); document.getElementById("graphHolder").append(graphCanvas.elt)
+    const downCanvasHolder = document.getElementById("downCanvasHolder")
+    const downCanvasTitle = document.createElement("p")
+    downCanvasTitle.innerText = "Wave traveling down through the film"
+    downCanvasHolder.append(downCanvasTitle)
+    downCanvasHolder.append(downCanvas.elt)
+
+    const upCanvasHolder = document.getElementById("upCanvasHolder")
+    const upCanvasTitle = document.createElement("p")
+    upCanvasTitle.innerText = "Wave's reflections back out of the film"
+    upCanvasHolder.append(upCanvasTitle)
+    upCanvasHolder.append(upCanvas.elt)
+
+    const sumCanvasHolder = document.getElementById("sumCanvasHolder")
+    const sumCanvasTitle = document.createElement("p")
+    sumCanvasTitle.innerText = "Sum of the reflected waves: what we see"
+    sumCanvasHolder.append(sumCanvasTitle)
+    sumCanvasHolder.append(sumCanvas.elt)
+
+    document.getElementById("graphHolder").append(graphCanvas.elt)
 }
 
 let t = 0
@@ -46,11 +65,18 @@ function draw() {
 
     downCanvas.noStroke(); downCanvas.strokeWeight(1)
     upCanvas.noStroke(); upCanvas.strokeWeight(1)
+    sumCanvas.noStroke(); sumCanvas.strokeWeight(1)
 
-    for (let i = 0; i < 2; i++) { drawBG([downCanvas, upCanvas][i], filmThickness, iorFilm, iorBelow, iorAbove) }
+    for (let i = 0; i < 3; i++) { drawBG([downCanvas, upCanvas, sumCanvas][i], filmThickness, iorFilm, iorBelow, iorAbove) }
 
     const firstBoundaryPos = downCanvas.height - 40 - nmToPix(filmThickness)
     const secondBoundaryPos = downCanvas.height - 40
+
+    const topWaveStartTime = firstBoundaryPos / nmToPix(c / iorAbove)
+    const bottomWaveStartTime = topWaveStartTime + (secondBoundaryPos - firstBoundaryPos) / nmToPix(c / iorFilm)
+
+    const topWavePhaseOffset = iorAbove < iorFilm ? Math.PI : 0
+    const bottomWavePhaseOffset = iorFilm < iorBelow ? Math.PI : 0
 
     downCanvas.stroke(waveColor.r, waveColor.g, waveColor.b); downCanvas.strokeWeight(4)
     drawWave(downCanvas, 0, 1, 20, 0, t, 0, wavelength, 0)
@@ -62,9 +88,9 @@ function draw() {
             firstBoundaryPos,
             -1, 20, 0,
             t,
-            firstBoundaryPos / nmToPix(c / iorAbove),
+            topWaveStartTime,
             wavelength,
-            iorAbove < iorFilm ? Math.PI : 0
+            topWavePhaseOffset
         )
 
         drawWaveFade(
@@ -72,22 +98,22 @@ function draw() {
             firstBoundaryPos,
             -1, 20, 0,
             t,
-            firstBoundaryPos / nmToPix(c / iorAbove),
+            topWaveStartTime,
             wavelength,
-            iorAbove < iorFilm ? Math.PI : 0
+            topWavePhaseOffset
         )
     }
 
     if (iorFilm !== iorBelow) {
-        upCanvas.stroke(waveColor.r, waveColor.g, waveColor.b, 100); upCanvas.strokeWeight(4)
+        upCanvas.stroke(waveColor.r, waveColor.g, waveColor.b, 150); upCanvas.strokeWeight(4)
         drawWave(
             upCanvas,
             secondBoundaryPos,
             -1, 20, 10,
             t,
-            firstBoundaryPos / nmToPix(c / iorAbove) + (secondBoundaryPos - firstBoundaryPos) / nmToPix(c / iorFilm),
+            bottomWaveStartTime,
             wavelength,
-            iorFilm < iorBelow ? Math.PI : 0
+            bottomWavePhaseOffset
         )
 
         drawWaveFade(
@@ -95,9 +121,24 @@ function draw() {
             secondBoundaryPos,
             -1, 20, 10,
             t,
-            firstBoundaryPos / nmToPix(c / iorAbove) + (secondBoundaryPos - firstBoundaryPos) / nmToPix(c / iorFilm),
+            bottomWaveStartTime,
             wavelength,
-            iorFilm < iorBelow ? Math.PI : 0
+            bottomWavePhaseOffset
+        )
+    }
+
+    if (iorFilm !== iorAbove && iorFilm !== iorBelow) {
+        sumCanvas.stroke(waveColor.r, waveColor.g, waveColor.b); sumCanvas.strokeWeight(4)
+        drawSumWave(
+            sumCanvas,
+            firstBoundaryPos,
+            secondBoundaryPos,
+            20, -5,
+            t,
+            topWaveStartTime,
+            bottomWaveStartTime,
+            topWavePhaseOffset,
+            bottomWavePhaseOffset
         )
     }
 
@@ -156,6 +197,62 @@ function drawWave(canvas, sourcePos, direction, spacing, spacingOffset, time, wa
         )
 
         phase += 2 * Math.PI * getIor(vectorPos) / nmToPix(wavelength) * spacing
+    }
+}
+
+function drawSumWave(canvas, sourcePosTop, sourcePosBottom, spacing, spacingOffset, time, waveStartTimeTop, waveStartTimeBottom, phaseOffsetTop, phaseOffsetBottom) {
+    const frequency = c / wavelength
+
+    const end = 0
+    const tTop = time - waveStartTimeTop
+    const tBottom = time - waveStartTimeBottom
+
+    if (tTop < 0) { return }
+
+    sourcePosTop = Math.floor(sourcePosTop / spacing) * spacing + spacingOffset
+    sourcePosBottom = Math.floor(sourcePosBottom / spacing) * spacing + spacingOffset
+
+    let phaseTop = -2 * Math.PI * frequency * tTop + phaseOffsetTop
+    let phaseBottom = -2 * Math.PI * frequency * tBottom + phaseOffsetBottom
+
+    const maxTravelDistTop = tTop > 25 ? Math.abs(end - sourcePosTop) : Math.min(Math.abs(end - sourcePosTop), getTravelDistance(sourcePosTop, -1, tTop))
+    const maxTravelDistBottom = tTop > 25 ? Math.abs(end - sourcePosBottom) : Math.min(Math.abs(end - sourcePosBottom), getTravelDistance(sourcePosBottom, -1, tBottom))
+
+    // drawing the bottom reflection on its own
+    for (let i = 0; i <= Math.min(maxTravelDistBottom, sourcePosBottom - sourcePosTop) - spacing; i += spacing) {
+        const vectorPos = sourcePosBottom - i
+
+        drawVector(
+            canvas,
+            createVector(70 * Math.sin(phaseBottom), 0),
+            createVector(canvas.width / 2, vectorPos),
+            15 * Math.abs(Math.sin(phaseBottom)), 0.5
+        )
+
+        phaseBottom += 2 * Math.PI * getIor(vectorPos) / nmToPix(wavelength) * spacing
+    }
+
+    // drawing the top reflection summed with the bottom
+    for (let i = 0; i <= maxTravelDistTop; i += spacing) {
+        const vectorPos = sourcePosTop - i
+
+        let sum = 0
+        if (maxTravelDistBottom > sourcePosBottom - vectorPos) {
+            sum = Math.sin(phaseTop) + Math.sin(phaseBottom)
+        }
+        else {
+            sum = Math.sin(phaseTop)
+        }
+
+        drawVector(
+            canvas,
+            createVector(70 * sum, 0),
+            createVector(canvas.width / 2, vectorPos),
+            15 * Math.abs(sum), 0.5
+        )
+
+        phaseTop += 2 * Math.PI * getIor(vectorPos) / nmToPix(wavelength) * spacing
+        phaseBottom += 2 * Math.PI * getIor(vectorPos) / nmToPix(wavelength) * spacing
     }
 }
 
@@ -223,6 +320,8 @@ function drawVector(canvas, vector, position, headLength, headAngle) {
 }
 
 function getLightIntensity(wavelength, thickness, iorAbove, iorFilm, iorBelow) {
+    if (iorFilm == iorAbove || iorFilm == iorBelow) { return 1 }
+
     const PI = Math.PI
 
     let phaseOffset = 0
@@ -261,8 +360,16 @@ function drawGraph(wavelength, thickness, iorAbove, iorFilm, iorBelow) {
     )
 
     graphCanvas.stroke(255)
-    graphCanvas.line(0, graphCanvas.height - 20, graphCanvas.width, graphCanvas.height - 20)
+    drawVector(graphCanvas, createVector(790, 0), createVector(0, graphCanvas.height-20), 15, 0.6)
     drawVector(graphCanvas, createVector(0, 20 - graphCanvas.height), createVector(20, graphCanvas.height), 15, 0.6)
+
+    graphCanvas.noStroke()
+    graphCanvas.fill(255)
+    graphCanvas.textSize(30)
+    graphCanvas.textFont("Times New Roman")
+
+    graphCanvas.text("I", 40, 40)
+    graphCanvas.text("λ", 760, 370)
 }
 
 function getFilmColor(thickness, iorAbove, iorFilm, iorBelow) {
@@ -273,8 +380,6 @@ function getFilmColor(thickness, iorAbove, iorFilm, iorBelow) {
         totalCol.add(createVector(c.r, c.g, c.b).mult(getLightIntensity(l, thickness, iorAbove, iorFilm, iorBelow)).mult(s))
     }
     totalCol.div(150)
-
-    console.log(totalCol)
 
     return { r: totalCol.x, g: totalCol.y, b: totalCol.z }
 }
@@ -318,7 +423,7 @@ function hsvToRgb(h, s, v) {
     }
 }
 
-function wavelengthToRGB(wavelength){
+function wavelengthToRGB(wavelength) {
     const hsv = wavelengthToHSV(wavelength)
     return hsvToRgb(hsv.h, hsv.s, hsv.v)
 }

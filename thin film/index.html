@@ -21,7 +21,11 @@
   <body>
     <script src="sketch.js" defer></script>
 
-    <div id="canvasHolder"></div>
+    <div id="canvases" style="display: flex;">
+        <div id="downCanvasHolder" class="group" style="margin: 10px;"></div>
+        <div id="upCanvasHolder" class="group" style="margin: 10px;"></div>
+        <div id="sumCanvasHolder" class="group" style="margin: 10px;"></div>
+    </div>
 
     <div class="group">
         <h2>Controls</h2>
@@ -40,11 +44,12 @@
     <div class="group" style="width: 815px;">
         <p>Graph of light intensity as a function of wavelength:</p>
         <div id="graphHolder"></div>
-        <span>Total colour of the film: </span>
+        <span>Apparent colour of the film: </span>
         <br>
         <p id="colorDisplay"></p>
     </div>
 
+    <h2><a href="explanation.html">How am I getting the apparent colour?</a></h2>
 
   </body>
 </html>
