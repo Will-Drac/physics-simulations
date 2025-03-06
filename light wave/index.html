@@ -24,45 +24,40 @@
     <div id="content">
         <div id="divCanvas">
             <canvas id="mainCanvas" width="600" height="600"></canvas>
-            <img id="scale" src="scale.png">
+            <img id="scale" src="scale.png" style="pointer-events: none;">
         </div>
         <div id="divControl">
             <div id="controlTop">
                 <h2 class="controlTitle">Setup Options</h2>
+
                 <h3>Obstacle Texture</h3>
                 <select id="obstacleSelect">
                     <option value="obstacles/none.png">None</option>
-                    <option value="obstacles/doubleSlit.png">Double Slit</option>
                     <option value="obstacles/singleSlit.png">Single Slit</option>
-                    <option value="obstacles/ellipse.png">Ellipse</option>
-                    <option value="obstacles/flashlight.png">Flashlight</option>
-                    <option value="obstacles/fractal.png">Fractal</option>
-                    <option value="obstacles/maze.png">Maze</option>
-                    <option value="obstacles/mirror.png">Mirror</option>
-                    <option value="obstacles/parabolic.png">Parabolic</option>
+                    <option value="obstacles/doubleSlit.png">Double Slit</option>
+                    <option value="obstacles/colouredReflections.png">Coloured Reflections</option>
+                    <option value="obstacles/noise.png">Noise</option>
                     <option value="obstacles/obstacles.png">Obstacles</option>
-                    <option value="obstacles/rocks.png">Rocks</option>
-                    <option value="obstacles/grating.png">Grating</option>
                 </select>
+
                 <h3>Refraction Texture</h3>
                 <select id="IORSelect">
                     <option value="ior/none.png">None</option>
                     <option value="ior/lens.png">Lens</option>
                     <option value="ior/sphere.png">Sphere</option>
-                    <!-- <option value="ior/thinFilm.png">Thin Film</option> -->
                     <option value="ior/trapezoid.png">Trapezoid</option>
                     <option value="ior/water.png">Water</option>
                     <option value="ior/gradient.png">Gradient</option>
                 </select>
+
                 <h3>Emitter Options</h3>
-                <select id="emitterSelect">
-                    <option value="point">Single Source</option>
-                    <option value="direction">Direction Source</option>
-                    <option value="center">Center Source</option>
-                </select>
+                <button id="addEmitter">Add Emitter</button>
+                <div id="emitters"></div>
+
                 <h3>Number of Wavelengths</h3>
                 <span id="waveLengthDisplay">4</span><input type="range" min="1" max="75" step="1" value="4" id="numWavelengths" oninput="document.getElementById('waveLengthDisplay').innerHTML = document.getElementById('numWavelengths').value">
-                <button id="startButton"><b style="text-shadow: 2px 2px 5px black;;">RESET</b></button>
+                <button id="startButton"><b style="text-shadow: 2px 2px 5px black;" class="bigButton">RESET</b></button>
+
             </div>
             <div id="controlMiddle">
                 <h2 class="controlTitle">Real Time Settings</h2>
@@ -73,7 +68,7 @@
                     <!-- <option value="direction">Mode</option> -->
                 </select>
                 <h3>Brightness</h3>
-                <input id="brightness" type="range" min="0" max="10" step="0.01" value="4">
+                <input id="brightness" type="range" min="0" max="10" step="0.01" value="2">
             </div>
             <div id="controlBottom">
                 <h3 id="frameCount"></h3>  
@@ -83,5 +78,3 @@
 </body>
 
 </html>
-
-<!-- on to script.js -->

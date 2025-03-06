@@ -68,7 +68,7 @@ fn f1(x: f32) -> f32 {
     }
 }
 
-// need to min this with 1 maybe
+// this needs to be minned with 1 to be physically accurate
 fn f2(x: f32, d: f32) -> f32 {
     let F = f1(2*d*modulo(x-0.5, 1) - d);
     if (d<1) {
@@ -87,6 +87,7 @@ fn saturationToSpectrumStretch(sat: f32) -> f32 {
     return pow(sat/0.7, 8.6) + sat/0.7;
 }
 
+// how much of this wavelength is reflected considering the color of the surface
 fn reflectionSpectrum(color: vec3f, wavelength: f32) -> f32 {
     let hsv = rgbToHsv(color);
     let mainWavelength = hueToWavelength(hsv.x);
