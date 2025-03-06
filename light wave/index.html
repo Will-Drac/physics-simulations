@@ -32,10 +32,12 @@
 
                 <h3>Obstacle Texture</h3>
                 <select id="obstacleSelect">
-                    <option value="obstacles/absorbTest.png">Test 1</option>
-                    <option value="obstacles/absorbTest2.png">Test 2</option>
-                    <option value="obstacles/absorbTest4.png">Test 4</option>
                     <option value="obstacles/none.png">None</option>
+                    <option value="obstacles/singleSlit.png">Single Slit</option>
+                    <option value="obstacles/doubleSlit.png">Double Slit</option>
+                    <option value="obstacles/colouredReflections.png">Coloured Reflections</option>
+                    <option value="obstacles/noise.png">Noise</option>
+                    <option value="obstacles/obstacles.png">Obstacles</option>
                 </select>
 
                 <h3>Refraction Texture</h3>
@@ -43,18 +45,12 @@
                     <option value="ior/none.png">None</option>
                     <option value="ior/lens.png">Lens</option>
                     <option value="ior/sphere.png">Sphere</option>
-                    <!-- <option value="ior/thinFilm.png">Thin Film</option> -->
                     <option value="ior/trapezoid.png">Trapezoid</option>
                     <option value="ior/water.png">Water</option>
                     <option value="ior/gradient.png">Gradient</option>
                 </select>
 
                 <h3>Emitter Options</h3>
-                <!-- <select id="emitterSelect">
-                    <option value="point">Single Source</option>
-                    <option value="direction">Direction Source</option>
-                    <option value="center">Center Source</option>
-                </select> -->
                 <button id="addEmitter">Add Emitter</button>
                 <div id="emitters"></div>
 
@@ -72,7 +68,7 @@
                     <!-- <option value="direction">Mode</option> -->
                 </select>
                 <h3>Brightness</h3>
-                <input id="brightness" type="range" min="0" max="10" step="0.01" value="4">
+                <input id="brightness" type="range" min="0" max="10" step="0.01" value="2">
             </div>
             <div id="controlBottom">
                 <h3 id="frameCount"></h3>  

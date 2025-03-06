@@ -231,7 +231,9 @@ function handleIconsDragging(event) {
 }
 
 function handleMouseDown(event) {
-    for (let e of emitters) {
+    for (let i = emitters.length - 1; i >= 0; i--) {
+        const e = emitters[i]
+
         if (e.type == "Point") {
             if ((cursor.x - e.pos.x) ** 2 + (cursor.y - e.pos.y) ** 2 < 40) {
                 e.pos.grabbed = true
@@ -811,7 +813,6 @@ async function main(scene) {
 TODO:
 
 figure out what's going on with dx dy ds and that weird constant at the wavelength calculation
-multiple emitters, coloured, and movable?
-redo all obstacle textures with the new way
-redo ior textures to be smooth (maybe that helps)
+make point emitters emit from a circle and not a point to make it less square?
+option to make area emitters directional by putting a layer of 0 wave on one side
 */

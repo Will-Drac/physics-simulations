@@ -76,7 +76,7 @@ fn hueToWavelength(x: f32) -> f32 {
 }
 
 fn saturationToSpectrumStretch(sat: f32) -> f32 {
-    return pow(sat/0.7, 8.6) + sat/0.7;
+    return pow(sat/0.7, 1) + sat/0.7;
 }
 
 // how much of this wavelength is emitted considering the color of the emitter
@@ -98,7 +98,7 @@ fn emissionSpectrum(color: vec3f, wavelength: f32) -> f32 {
     let theta = u.time * dt * 6.28 * frequency; //gives the wave the wavelength i want
 
     let thisPos = vec3i(vec3f(_DIRVEC, 0) * (f32(id.x) - f32(_SIZE))) + vec3i(_POS, i32(id.z));
-    let brightnessPerPixel = 2 / (f32(_SIZE) + 1); //!why is this not right
+    let brightnessPerPixel = sqrt(2 / (f32(_SIZE) + 1));
 
     let wavelengthEmissionAmount = emissionSpectrum(_COL, (700-400)*(f32(id.z)+.5)/numWavelengths+400);
 
