@@ -9,7 +9,7 @@ div.group {
     background-color: rgb(25, 26, 27);
     /* background: linear-gradient(0deg, rgba(20,21,22,1) 0%, rgba(25,26,27) 100%); */
     background: linear-gradient(0deg, hsl(210 5% 7% / 1) 20%, hsl(210 4% 16% / 1) 80%);
-    border:solid 1px rgb(30, 31, 32);
+    border:solid 1px rgb(146, 146, 146);
     border-radius: 20px;
     box-shadow: 0px 0px 5px black;
     margin-top: 15px;

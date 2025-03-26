@@ -1,8 +1,3 @@
-pick a consistent style for all simulations
-    make all simulations use the css file
-
-absorption in the light wave simulation finally
-
 New ideas:
     mechanics roller coaster OR mechanics sandbox <- cooler i think
 
@@ -22,3 +17,5 @@ New ideas:
     circuit simulation with capacitors where it shows you voltage and current and charge and all that
 
     relativistic render engine
+
+    visualizing an electron going though a circuit, showing it's current and potential in an intuitive way

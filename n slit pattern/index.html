@@ -16,13 +16,15 @@
 
   <body>
     <script defer src="sketch.js"></script>
-    <label>Number of Slits: </label><input id="numInput" type="number" value="2" min="1"> <br>
-    <label>Spacing Between Slits, \(d\) (m): </label><input id="dInput" type="number" value="7.6e-6" step="1e-6" min="0"> <br>
-    <label>Width of one Slit \(a\) (m): </label><input id="aInput" type="number" value="2.54e-6" step="1e-6" min="0"> <br>
-    <label>Distance to the Screen (m): </label><input id="distInput" type="number" value="1.25" step="0.01" min="0"> <br>
-    <label>Size of the Screen (m): </label><input id="sizeInput" type="number" value="0.5" step="0.1" min="0"> <br>
-    <label>Wavelength (m): </label><input id="wavelengthInput" type="number" value="405e-9" step="1e-9" min="0"><br>
-    <label>Animation Time (s): </label><input id="tInput" type="number" value="15" step="1" min="0"><br>
-    <button onclick="startSimulation()">Start</button> <button onclick="stopSimulation()">Stop</button>
+    <div class="group">
+        <label>Number of Slits: </label><input id="numInput" type="number" value="2" min="1"> <br>
+        <label>Spacing Between Slits, \(d\) (m): </label><input id="dInput" type="number" value="7.6e-6" step="1e-6" min="0"> <br>
+        <label>Width of one Slit \(a\) (m): </label><input id="aInput" type="number" value="2.54e-6" step="1e-6" min="0"> <br>
+        <label>Distance to the Screen (m): </label><input id="distInput" type="number" value="1.25" step="0.01" min="0"> <br>
+        <label>Size of the Screen (m): </label><input id="sizeInput" type="number" value="0.5" step="0.1" min="0"> <br>
+        <label>Wavelength (m): </label><input id="wavelengthInput" type="number" value="405e-9" step="1e-9" min="0"><br>
+        <label>Animation Time (s): </label><input id="tInput" type="number" value="15" step="1" min="0"><br>
+        <button onclick="startSimulation()">Start</button> <button onclick="stopSimulation()">Stop</button>
+    </div>
   </body>
 </html>

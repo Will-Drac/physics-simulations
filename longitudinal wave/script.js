@@ -253,8 +253,6 @@ async function main() {
         const renderCommandBuffer = renderEncoder.finish()
         device.queue.submit([renderCommandBuffer])
 
-        document.getElementById("frameRateDisplay").innerText = (1 / deltaTime).toFixed(1)
-
         requestAnimationFrame(render)
     }
     requestAnimationFrame(render)
