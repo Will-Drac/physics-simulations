@@ -1,93 +1,132 @@
-const barWidth = 15 //you can set this to whatever looks good
-pivot = 50 //this should be set by the user, but for testing it's how you can set the pivot position of the bar
-length = 200 //this should also be set by the user
-let mass = 1 //user defined
+let pivotInput, massInput, lengthInput, forcePositionInput, addForceButton;
+
+const barWidth = 20
+let length = 200
+let pivot = 50 
+let mass = 1
 let angularVelocity = 0
 let angularAcceleration = 0
 let angle = 0
 let forces = []
+let forcesTemp = []
 
-let pivotInput, massInput, lengthInput, forcePositionInput, forceMagnitudeInput, addForceButton;
 
+let pivotX = -pivot * (400 / length)
+
+
+        
 
 function setup() {
-    createCanvas(800, 800) //creating the canvas, 800 pixels by 800 pixels
+    const c = createCanvas(800, 800) //creating the canvas, 800 pixels by 800 pixels
+    c.parent(document.getElementById("canvasContainer")) //controls under canvas
 
-    createP("Length of bar:")
-    lengthInput = createInput(length.toString());
-    lengthInput.input(() => {
-        length = parseFloat(lengthInput.value());
-    });
-    
-    createP("Mass of bar:")
-    massInput = createInput(mass.toString());
-    massInput.input(() => {
-        mass = parseFloat(massInput.value());
-    });
 
-    createP("Position of pivot:")
-    pivotInput = createInput(pivot.toString());
-    pivotInput.input(() => {
-        pivot = parseFloat(pivotInput.value());
-    });
+    // getting the elements from html
+    lengthInput = document.getElementById("lengthInput")
+    massInput = document.getElementById("massInput")
+    pivotInput = document.getElementById("pivotInput")
 
-    createP("Position of force on bar:");
-    forcePositionInput = createInput("100") //change to whatever looks good
+    forcePositionInput = document.getElementById("forcePositionInput")
+    forceInputX = document.getElementById("forceInputX")
+    forceInputY = document.getElementById("forceInputY")
 
-    createP("Magnitude of force (y component)");
-    forceMagnitudeY = createInput("10") //change to whatever looks good
+    document.getElementById("inputForceButton").addEventListener("click", function (){
+        const forcePosition = document.getElementById("forcePositionInput").value
+        const forceMagnitudeX = document.getElementById("forceInputX").value
+        const forceMagnitudeY = document.getElementById("forceInputY").value
+        forcesTemp.push([forcePosition, createVector(forceMagnitudeX, forceMagnitudeY)])
+    })
 
-    addForceButton = createButton("Add force:");
-    addForceButton.mousepressed(() =>{
-        const forcePosition = parseFloat(forcePositionInput.value());
-        const forceMagnitude = parseFloat(forceMagnitudeInput.value());
-        forces.push([forcePosition, createVector(0, forceMagnitude)]);
-    });
+    document.getElementById("startButton").addEventListener("click", function (){
+        // set velocity and acceleration to 0
+        // update globals from elements' values
+
+        forces = forcesTemp
+
+        length = parseFloat(lengthInput.value)
+        mass = parseFloat(massInput.value)
+        pivot = parseFloat(pivotInput.value)
+    })
 }
 
-
+        
 let t = 0 //a variable to keep track of the time since the simulation started
 function draw() {
     background(51) //filling the background of the canvas with a solid color (i think this looks nice but you can do whatever with it)
-    t += deltaTime / 1000 //p5 keeps track of deltaTime, which is the time between frames in milliseconds. adding this (converted to seconds) to our tally of the time keeps the time up to date
+    //p5 keeps track of deltaTime, which is the time between frames in milliseconds. adding this (converted to seconds) to our tally of the time keeps the time up to date
 
     let momentOfInertia = calculateMomentOfInertia(mass, length, pivot)
-
+   
+        
     let netTorque = sumTorque(pivot)
-    angularAcceleration = netTorque / momentOfInertia // t = Ia
-    angularVelocity += angularAcceleration * t //??
-    angle += angularVelocity * t //???
-    // between push and pop, you can do things like translate, rotate, and scale, so that when you draw something it would be affected by those transformations
-    // i find it makes most sense to read them bottom to top
 
-    //bar
-    push()
-    translate(width / 2, height / 2) //finally it's moved to the center of the canvas: at a position with half the width and height of the canvas
-    rotate(t) //it then rotates the rectangle. rotation always happens around the origin, that's why it's only being moved to the center of the canvas in the translate above
-    rect(-pivot / length * 400, -barWidth / 2, 400, barWidth) //this one is kinda hard to explain, so i drew it out in "bar diagram.png"
-    pop()
+    document.getElementById("netTorqueDisplay").innerText = `Net Torque: ${netTorque.toFixed(2)} Nm`; //two decimals
 
-    //pivot
-    push()
-    translate(width / 2, height / 2)
-    let pivotX = -pivot * (400/length) //?????
-    fill(255, 0 ,0) //red
-    ellipse(pivotX, 0, 10);
-    pop()
+    angularAcceleration = netTorque / momentOfInertia
+    angularVelocity += angularAcceleration * (deltaTime / 1000)
+    angle += angularVelocity * (deltaTime / 1000)
 
-    //forces
-    push()
-    translate(width / 2, height / 2)
-    for (let forces of forces) {
-        let posX = (force[0] - pivot) * (400 / length) //???
-        stroke(0, 255, 0) //green
-        strokeWeight(2)
-        line(posX, 0, posX, force [1].y * -10)
+
+    // bar
+    push();
+    translate(width / 2 + pivotX, height / 2);
+    rotate(-angle); // rotate around the pivot with angle calculated due to angularVelocity
+    rect(-pivot * (400 / length), -barWidth / 2, 400, barWidth);
+    pop();
+
+    // pivot
+    push();
+    translate(width / 2 + pivotX, height / 2); // this movesit to pivot point
+    fill(255, 0, 0); // red!!!
+    ellipse(0, 0, 10);
+    pop();
+
+    let showTorqueForcesOnly = document.getElementById("toggleTorqueForces").checked;
+    
+    // forces
+    push();
+    translate(width / 2 + pivotX, height / 2);
+    rotate(-angle);
+
+    for (let force of forces) {
+        let posX = (force[0] - pivot) * (400 / length);
+        if (!showTorqueForcesOnly) {
+            // x if its off
+            stroke(255, 0, 0); // Red for Fx
+            drawVector(
+                createVector(force[1].x, 0),
+                createVector(posX, -force[1].y),
+                20,
+                0.5
+            );
+    
+            // this is not always visible since it's net
+            strokeWeight(4);
+            stroke(0, 255, 0); // Green
+            drawVector(
+                force[1],
+                createVector(posX, 0),
+                20,
+                0.5
+            );
+        }
+
+        //y
+        stroke(0, 0, 255); // blu
+        strokeWeight(2);
+        drawVector(
+            createVector(0, force[1].y),
+            createVector(posX, 0),
+            20,
+            0.5
+        );
+    
+       
     }
-    pop()
-
-
+    pop();
 }
+
+
 
 function getTorque(radius, force) {
     return radius * force.y
@@ -95,23 +134,35 @@ function getTorque(radius, force) {
 
 
 function sumTorque() {
+
     let netTorque = 0
     for (let i = 0; i < forces.length; i += 1) {
         const r = forces[i][0] - pivot
         const F = forces[i][1]
         const T = getTorque(r, F)
         netTorque += T
-
+        
     }
+    
     return netTorque
 }
 
 
 function calculateMomentOfInertia(mass, length, pivot) {
     let density = mass / length
-    let I1 = (pivot**3)/3
-    let I2 = (((length**3)/3) - (pivot*(length**2))) + (((pivot**2)*L) - ((pivot**3)/3))
-    return density(I1 + I2)
+    let I1 = (pivot ** 3) / 3
+    let I2 = (((length ** 3) / 3) - (pivot * (length ** 2))) + (((pivot ** 2) * length) - ((pivot ** 3) / 3))
+    return density * (I1 + I2)
 
 }
-    
+
+
+function drawVector(vector, position, headLength, headAngle) {
+    push()
+    translate(position.x, position.y)
+    rotate(vector.heading() + Math.PI)
+    line(0, 0, vector.mag(), 0)
+    line(vector.mag(), 0, vector.mag() - headLength * Math.cos(headAngle), headLength * Math.sin(headAngle))
+    line(vector.mag(), 0, vector.mag() - headLength * Math.cos(headAngle), -headLength * Math.sin(headAngle))
+    pop()
+}

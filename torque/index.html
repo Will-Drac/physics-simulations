@@ -10,9 +10,64 @@
 
     <script src="libraries/p5.min.js"></script>
     <script src="libraries/p5.sound.min.js"></script>
+
+    <script src="sketch.js"></script>
   </head>
 
   <body>
-    <script src="sketch.js"></script>
+    <script src="sketch.jk" defer></script>
+    <div id="canvasContainer"></div>
+
+    <div id="netTorqueDisplay" style="font-size: 18px; font-weight: bold; color: white; padding: 10px;"></div>
+
+    <label>
+      <input type="checkbox" id="toggleTorqueForces" checked>
+      Only Display Force Relevant to Torque (Y-Component of Force)
+  </label>
+
+    <div class="optionsCategory">
+      <h2>Controls</h2>
+
+      <p>All inputs are in SI units.<p>
+        <fieldset>
+        <legend>Bar Properties</legend>
+        <label for="lengthInput">Length of Bar (m):</label>
+        <input type="number" id="lengthInput" min="0" max="400">
+        <br>
+        <label for="massInput">Mass of Bar (kg):</label>
+        <input type="number" id="massInput" min="0" max="500">
+        <br>
+        <label for="pivotInput">Position of Pivot From Left (m):</label>
+        <input type="number" id="pivotInput" min="0" max="400">
+      </fieldset>
+      <br>
+      <fieldset>
+        <legend>Force Properties</legend>
+        <label for="forcePositionInput">Position of Force From Left (m):</label>
+        <input type="number" id="forcePositionInput" min="0" max="400">
+        <br>
+        <label for="forceInputX">X-component of Force (N):</label>
+        <input type="number" id="forceInputX" min="-1000" max="1000">
+        <br>
+        <label for="forceInputY">Y-component of Force (N):</label>
+        <input type="number" id="forceInputY" min="-1000" max="1000">
+      <br>
+      </fieldset>
+      <br>
+        <button id="inputForceButton" type="button">Add Force</button>
+
+      <button id="startButton" type="button">Start Simulation</button>
+    </form>
+  </div>
+</body>
+</html>
+
+
+
+      
+
+  
+    </div>
+
   </body>
 </html>
