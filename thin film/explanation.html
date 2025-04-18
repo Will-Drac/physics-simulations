@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thin Film Visualization</title>
+    <meta name="description" content="Visualizing what goes on in a thin film, and how it makes such pretty colours.">
+
+    <link rel="stylesheet" href="../base.css">
+
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+</head>
+<body>
+    <p>What we see when looking at a thin film comes from the two reflected light waves, which you can see in the simulation.</p>
+    <h2><u>But how do we see light?</u></h2>
+    <p>Our eyes take in wiggles in the electromagnetic field (electromagnetic waves), process it in the brain, and we understand that to be light.</p>
+    <p>The way to replicate this process is to first separate light into its constituent frequencies. Then the amplitude of each frequency can be determined. Our brains see each frequency as its own colour, and they see amplitude squared as brightness, or "intensity".</p>
+
+    <h2><u>Getting colour from frequency</u></h2>
+    <p>The science of colour is really complicated. But for our purposes, colours on a screen are defined by three numbers: the amount of red, the amount of green, and the amount of blue in the colour. RGB.</p>
+    <p>You can find functions online to turn frequency/wavelength into an RGB value. I'll just call this function \(C(f)=\begin{bmatrix}r\\g\\b\end{bmatrix}\), returning the three values.</p>
+
+    <h2><u>Getting the amplitude of a particular frequency coming back out of the film</u></h2>
+    <p>At any point in space, the value of Wave 1 (the one coming out of the film from the first reflection) for any particular frequency is: \(W_1=Asin(\theta_1)\)</p>
+    <p>And the value for Wave 2 (the one coming out of the film from the second reflection) at any particular frequency is: \(W_2=Asin(\theta_2)\)</p>
+    <p>Note: we're assuming that both individual waves have the same amplitude \(A\) before they mix, which is not necessarily the case.</p>
+    <p>The sum of both waves is: \(W_1+W_2=Asin(\theta_1)+Asin(\theta_2)=A \left[ sin(\theta_1)+sin(\theta_2) \right]\)</p>
+    <p>Using the identity \(sin(a)+sin(b)=2 sin(\frac{a+b}{2}) \cdot cos(\frac{a-b}{2})\),</p>
+    $${W_1+W_2 = 2A \cdot sin(\frac{\theta_1+\theta_2}{2}) \cdot cos(\frac{\theta_1-\theta_2}{2})}$$
+    <p><u>Let's find out what \(\frac{\theta_1+\theta_2}{2}\) is.</u></p>
+    <p>\(\theta\) is defined as: \(\theta = kx-\omega t + \phi\)</p>
+    <p>Note that \(k\) and \(\omega\) can be expressed as functions of the frequency.</p>
+    <p>So let's add them:</p>
+    $${ \frac{\theta_1+\theta_2}{2} = \frac{(k_1 x_1 - \omega_1 t_1 + \phi_1) + (k_2 x_2 - \omega_2 t_2 + \phi_2)}{2} }$$
+    <p>We are adding two waves of the same frequency, and we're adding the waves as they appear at the same time, so \([k_1 = k_2 = k]\), \([\omega_1 = \omega_2 = \omega]\), and \([t_1 = t_2 = t]\). We can factor them out.</p>
+    $${\frac{\theta_1+\theta_2}{2} = k(\frac{x_1+x_2}{2}) - \omega t + (\frac{\phi_1+\phi_2}{2})}$$
+    $${\frac{\theta_1+\theta_2}{2} = kx_{avg} - \omega t + \phi_{avg}}$$
+    <p><u>And let's do the same with \(\frac{\theta_1-\theta_2}{2}\).</u></p>
+    $${\frac{\theta_1-\theta_2}{2} = \frac{(kx_1-\omega t + \phi_1) - (kx_2-\omega t + \phi_2)}{2}}$$
+    $${\frac{\theta_1-\theta_2}{2} = \frac{k(x_1-x_2) + (\phi_1 - \phi_2)}{2}}$$
+    $${\frac{\theta_1-\theta_2}{2} = \frac{k\Delta x + \Delta\phi}{2}}$$
+    <p>Now we can say that</p>
+    $${W_1+W_2 = 2A \cdot sin(kx_{avg} - \omega t + \phi_{avg}) \cdot cos(\frac{k\Delta x + \Delta\phi}{2})}$$
+    <p>This now looks like a new wave:</p>
+    $${ W_{tot} = \left[ 2A \cdot cos(\frac{k \Delta x + \Delta \phi}{2}) \right] sin(kx_{avg} - \omega t + \phi_{avg}) }$$
+    <p>\(2A \cdot cos(\frac{k \Delta x + \Delta \phi}{2})\) is a constant which functions as the amplitude of our total wave.</p>
+    <p>So this is what we need. To get light intensity out of it, all we need is to square it:</p>
+    $$ { I(f) = 4A^2 cos^2(\frac{k \Delta x + \Delta \phi}{2}) } $$
+
+    <h2><u>Putting it all together</u></h2>
+    <p>To get a single final colour, we can average out the color and brightness that comes with each frequency. Color is multiplied by intensity to darken frequencies with lower amplitudes. This can be thought of as in integral across the visible frequencies.</p>
+    $$ {C_{apparent} = \int^{750}_{430} C(f) I(f) df = \begin{bmatrix}r\\g\\b\end{bmatrix}_{apparent}} $$
+
+    <h2><u>Interpreting what \(\Delta x\) and \(\Delta \phi\) are</u></h2>
+    <p>\(\Delta x = x_2 - x_1\) (or \(x_1 - x_2\), but this is more convenient)</p>
+    <p>\(x\) represents the distance traveled by the wave from its source. The wave that reflects from the bottom of the film has traveled \(2T\) further than the wave that reflects from the top of the film, where \(T\) is the thickness of the film. This is because it has to travel all the way through the film, bounce, then make the return trip before it lines up with the other wave.</p>
+    <p>This means that \(x_2 = x_1 + 2T\), and therefore \(x_2 - x_1 = 2T\). So we have \(\Delta x = 2T\).</p>
+    <p>Likewise, \(\Delta \phi = \phi_2 - \phi_1\).</p>
+    <p>\(\phi\) is the phase offset of the wave. In this case, the phase offset comes from the reflection. If a wave moves from a medium with a lower index of refraction to a medium with a higher index of refraction, it will get a phase offset of \(\phi = \pi\). So to find \(\Delta\phi\), check if both waves reflect off a medium like that and subtract their offsets.</p>
+
+    <h2><u>Applying the formula for intensity: minima and maxima of intensity for a particular frequency</u></h2>
+    <p>\(I(f)\) is at a minimum or maximum when \(cos^2(\frac{k \Delta x + \Delta \phi}{2})\) is at a minimum or maximum. Let's see when that is.</p>
+    <p>Using the identity \(cos^2(\theta) = \frac{1}{2} \left( 1 + cos(2\theta) \right) \):</p>
+    $${ cos^2(\frac{k \Delta x + \Delta \phi}{2}) = \frac{1}{2} \left( 1 + cos(k\Delta x + \Delta\phi) \right) }$$
+    <p>Which is at a minimum or maximum when \(cos(k\Delta x + \Delta\phi)\) is at a minimum or maximum.</p>
+    <p>\(cos(\theta)\) (therefore \(I(f)\)) is at a minimum when \(\theta = \pi(2m+1)\), \(m\) being any integer.</p>
+    $${ k\Delta x + \Delta\phi = \pi(2m+1)}$$
+    $${ \frac{2\pi}{\lambda} 2t + \Delta\phi = \pi(2m+1) }$$
+    $${ \frac{4\pi fT}{c} + \Delta\phi = \phi(2m+1) }$$
+    $${ \frac{4fT}{c} + \frac{\Delta\phi}{\pi} = 2m + 1 }$$
+    $${ m = \frac{2fT}{c} + \frac{1}{2} \left( \frac{\Delta\phi}{\pi} - 1 \right) }$$
+    <p>Similarly, \(cos(\theta)\) (therefore \(I(f)\)) is at a maximum when \(\theta = 2\pi m\)</p>
+    $${ m = \frac{2fT}{c} + \frac{1}{2} \frac{\Delta\phi}{\pi} }$$
+    <p>Note: \(f=\frac{c}{n_{film}\lambda}\), where \(n_{film}\) is the index of refraction of the film and \(\lambda\) is the original wavelength at the source, assuming the light source is in air.</p>
+    <p>So for a min: \(m = \frac{2Tn}{\lambda} + \frac{1}{2} \left( \frac{\Delta\phi}{\pi} - 1 \right) \)</p>
+    <p>And for a max: \(m = \frac{2Tn}{\lambda} + \frac{1}{2} \frac{\Delta\phi}{\pi} \)</p>
+    
+    <a href="./index.html">Back to the simulation</a>
+</body>
+</html>

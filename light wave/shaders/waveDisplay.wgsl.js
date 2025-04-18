@@ -13,6 +13,7 @@ struct uniforms {
 ){
     let i = id.xy;
 
+    // adding together all the colours that have been determined
     var v = 0.;
     for (var j = u32(0); j < textureDimensions(originalTexture).z; j++) {
         v += textureLoad(originalTexture, vec3u(i, j), 0).r;
@@ -20,7 +21,7 @@ struct uniforms {
     v /= f32(textureDimensions(originalTexture).z);
 
     textureStore(
-        outputTexture, i, 
+        outputTexture, i,
         vec4f(
             u.brightness*v, //make positive values red and brighter
             -u.brightness*v, //make negative values green and brighter
@@ -31,5 +32,3 @@ struct uniforms {
 }
 
 `
-
-// on to renderWave.wgsl.js

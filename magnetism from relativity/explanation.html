@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magnetism from Relativity - Explanation</title>
+    <meta name="description" content="Explaining how magnetism is a product of the electric force and relativity.">
+    <link rel="stylesheet" href="../base.css">
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+</head>
+<body style="font-size: 25px;">
+    <h1>What's going on?</h1>
+    <p>What you're seeing is a positively charged particle moving with a certain speed parallel to a wire with conventional current flowing from left to right (since the electrons are moving right to left). The particle is always at the center of the screen, and the circles in the background give an indication of its motion, since they are stationary relative to the wire.</p>
+    <p>A wire with current flowing through it exerts the magnetic force on a moving particle. This is usually described with these equations:</p>
+    $$\vec{F} = q\vec{v} \times \vec{B}$$
+    $$\vec{B} = \frac{\mu_0 I}{2\pi R} \hat{\theta}$$
+    <p>Where \(\vec{F}\) is the force on the particle, \(q\) is the charge of the particle, \(\vec{v}\) is the velocity of the particle, \(\vec{B}\) is the magnetic field at the particle's position, \(\mu_0\) is the permeability of free space, \(I\) is the current in the wire, \(R\) is the distance from the wire to the particle, and \(\hat{\theta}\) is the unit vector coming from the cross product of the direction of current and the direction from the particle to the wire (or the right-hand rule).</p>
+    <p>Making it more specific to this situation with a particle moving parallel to the wire,</p>
+    $$\vec{v}=\begin{bmatrix}v_x\\0\\0\end{bmatrix}$$
+    $$\hat{\theta} = \begin{bmatrix}0\\0\\1\end{bmatrix} \Rightarrow \vec{B} = \frac{\mu_0 I}{2\pi R} \begin{bmatrix}0\\0\\1\end{bmatrix} = \begin{bmatrix}0\\0\\\frac{\mu_0 I}{2\pi R}\end{bmatrix} \Rightarrow B_z = \frac{\mu_0 I}{2\pi R}$$
+    (\(\hat{\theta}\) found by the right-hand rule)
+    $$\vec{F} = q(\vec{v}\times\vec{B}) = q\begin{bmatrix}v_yB_z-v_zB_y\\v_zB_x-v_xB_z\\v_xB_y-v_yB_x\end{bmatrix}$$
+    $$\vec{F} = q\vec{v}\times\vec{B} = \begin{bmatrix}0\\-q v_x (\frac{\mu_0 I}{2\pi R})\\0\end{bmatrix}$$
+    $$\vec{F} = -q v_x (\frac{\mu_0 I}{2\pi R})\hat{j}$$
+    <p>So the magnetic force is only in the y-direction, and it's down (\(-\hat{j}\)) when the particle is moving in the same direction as the current, and up when the particle is moving in the opposite direction as the current. This is exactly what you can see in the simulation, but the simulation gets to that result in a different way.</p>
+    <br>
+    <p>The special theory of relativity tells us that if you're moving, you'll see the world be compressed in the direction of your motion (we don't see it in our everyday lives because you would have to go extremely fast for it to be noticeable). This compression (\(\frac{L}{L_o}\) is the fraction of the original length observed after the contraction) depends on the speed you're going relative to the object you're observing, \(v\).</p>
+    $$\frac{L}{L_o} = \sqrt{1-\frac{v^2}{c^2}}$$
+    <p>So as our particle moves faster relative to the protons and electrons, to the our particle, they get closer together. This brings more protons and electrons into view. If there was no current, this would make no difference in terms of forces (the equation above agrees, \(I=0 \Rightarrow F_y=0\)), but since the electrons are moving, they will get compressed differently to the protons.</p>
+    <p>I set the electrons to have \(v_x=-0.75c\) (which is extremely fast, three-quarters the speed of light, just so that the effect is visible). If we set the particle to be moving at that speed, the electrons will appear stationary and therefore won't be compressed, but the protons will be moving relative to the particle, making it seem to the particle as though there are more protons in the wire than electrons, repelling the particle away from the wire by the electric force.</p>
+    <p>If we set the particle to be moving at \(v_x=0.75c\), however, both the protons and the electrons will be moving, but the electrons will be moving faster than the protons because of the current, and therefore they will be compressed more, making it appear to the particle as though there are more electrons than protons in the wire, attracting the particle to the wire.</p>
+    <br>
+    <p>So if we take relativity into account, we can see that magnetism doesn't really exist in the way you might think, it's only the electric force and a strange result of relativity which is length contraction.</p>
+    <a href="index.html">Back to the simulation</a>
+</body>
+</html>

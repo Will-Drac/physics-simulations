@@ -16,8 +16,11 @@ fn indexToX(index: u32) -> f32 {
 ) {
     let i = id.x;
 
-    let point1 = vec2f(indexToX(i), points[i]);
-    let point2 = vec2f(indexToX(i+1), points[i+1]);
+    let i1 = 2 * i;
+    let i2 = 2 * (i + 1);
+
+    let point1 = vec2f(indexToX(i1), points[i1]);
+    let point2 = vec2f(indexToX(i2), points[i2]);
 
     let thisToNext = point2 - point1;
 

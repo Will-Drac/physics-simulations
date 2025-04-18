@@ -2,15 +2,28 @@ export default /*wgsl*/ `
 
 @group(0) @binding(0) var outputTexture: texture_storage_2d<rg32float, write>;
 
-@compute @workgroup_size(5, 5, 5) fn placeParticle(
+const PI = 3.14159;
+
+fn multImaginary(v: vec2f) -> vec2f {
+    return vec2f(-v.y, v.x);
+}
+
+@compute @workgroup_size(1) fn placeParticle(
     @builtin (global_invocation_id) id: vec3u
 ){
-    let i = vec2f(id.xy)-vec2f(2);
+    let i = vec2f(id.xy);
+    let S = vec2f(textureDimensions(outputTexture));
 
-    const s = 0.25;
+    let M = exp(-((i.y - S.y / 2.0) * (i.y - S.y / 2.0)) / 100.0) * exp(-(((i.x - S.x / 2.0 - S.x / 4.0 - S.x / 8.0) * (i.x - S.x / 2.0 - S.x / 4.0 - S.x / 8.0)) / 100.0));
 
-    let v = 1/(2*3.141592*s)*exp(-(i.x*i.x+i.y*i.y)/2*s);
-    textureStore(outputTexture, vec2u(400, 400)+id.xy, vec4f(v, 0, 0, 0));
+    let v = vec2f(
+        M * sin((60.0 * PI * i.x) / S.x),
+        M * cos((60.0 * PI * i.x) / S.x)
+    );
+
+    textureStore(outputTexture, id.xy, vec4f(v, 0, 0));
+
+    // math.exp(-(((y-ymax/2)**2))/1000)*math.exp(-(((x-xmax/2-xmax/4-xmax/8)**2))/1000)*(math.sin((60*math.pi*x)/(xmax)) -1j*math.cos((60*math.pi*(x))/(xmax)+math.pi))
 }
 
 `

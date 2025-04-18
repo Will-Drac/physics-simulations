@@ -52,13 +52,13 @@ async function main() {
 
     const startPipeline = device.createComputePipeline({
         layout: "auto",
-        compute: {module: startModule}
+        compute: { module: startModule }
     })
 
     const startBindGroup = device.createBindGroup({
         layout: startPipeline.getBindGroupLayout(0),
         entries: [
-            {binding: 0, resource: waveTextures[0].createView()}
+            { binding: 0, resource: waveTextures[0].createView() }
         ]
     })
 
@@ -66,7 +66,7 @@ async function main() {
     const startPass = startEncoder.beginComputePass()
     startPass.setPipeline(startPipeline)
     startPass.setBindGroup(0, startBindGroup)
-    startPass.dispatchWorkgroups(1, 1)
+    startPass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
     startPass.end()
 
     const startCommandBuffer = startEncoder.finish()
@@ -116,7 +116,7 @@ async function main() {
 
     const renderPipeline = device.createRenderPipeline({
         layout: "auto",
-        vertex: { 
+        vertex: {
             module: renderModule,
         },
         fragment: {
@@ -144,27 +144,27 @@ async function main() {
     let currentWaveTexture = 0
     function render(time) {
 
-        currentWaveTexture = (currentWaveTexture + 1) % 2
+        for (let i = 0; i < 50; i++) {
+            currentWaveTexture = (currentWaveTexture + 1) % 2
 
+            const updateBindGroup = device.createBindGroup({
+                layout: updatePipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: waveTextures[currentWaveTexture].createView() }, //the one being written to
+                    { binding: 1, resource: waveTextures[(currentWaveTexture + 1) % 2].createView() } //the last one that was updated
+                ]
+            })
 
-        
-        const updateBindGroup = device.createBindGroup({
-            layout: updatePipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: waveTextures[currentWaveTexture].createView() }, //the one being written to
-                { binding: 1, resource: waveTextures[(currentWaveTexture + 1) % 2].createView() } //the last one that was updated
-            ]
-        })
+            const updateEncoder = device.createCommandEncoder()
+            const updatePass = updateEncoder.beginComputePass()
+            updatePass.setPipeline(updatePipeline)
+            updatePass.setBindGroup(0, updateBindGroup)
+            updatePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+            updatePass.end()
 
-        const updateEncoder = device.createCommandEncoder()
-        const updatePass = updateEncoder.beginComputePass()
-        updatePass.setPipeline(updatePipeline)
-        updatePass.setBindGroup(0, updateBindGroup)
-        updatePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
-        updatePass.end()
-
-        const updateCommandBuffer = updateEncoder.finish()
-        device.queue.submit([updateCommandBuffer])
+            const updateCommandBuffer = updateEncoder.finish()
+            device.queue.submit([updateCommandBuffer])
+        }
 
 
 

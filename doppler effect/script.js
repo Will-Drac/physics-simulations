@@ -13,6 +13,8 @@ const iterationsPerSpeakerUpdate = 10
 const maxSpeakerPositions = Math.ceil(Math.sqrt(2) * document.getElementById("displayCanvas").clientWidth / waveSpeed / ((1 / 144) * iterationsPerSpeakerUpdate))
 
 let speakerPos = { x: 400, y: 400, grabbed: false }
+let speakerVel = { x: 0, y: 0 }
+let speakerAccelerationConstant = 1
 let speakerPositions = []
 
 
@@ -236,19 +238,37 @@ async function main() {
         else if (speakerPos.grabbed) {
             const positionDifference = { x: cursor.x - speakerPos.x, y: cursor.y - speakerPos.y }
             const positionDifferenceMag = Math.sqrt(positionDifference.x ** 2 + positionDifference.y ** 2)
+            const positionDifferenceDir = {
+                x: positionDifference.x / positionDifferenceMag,
+                y: positionDifference.y / positionDifferenceMag
+            }
+            const d = 10 * Math.min(positionDifferenceMag, 50)
+            speakerVel = {
+                x: speakerVel.x + speakerAccelerationConstant * d * positionDifferenceDir.x,
+                y: speakerVel.y + speakerAccelerationConstant * d * positionDifferenceDir.y,
+            }
+            const speakerVelMag = Math.sqrt(speakerVel.x ** 2 + speakerVel.y ** 2)
+            const speakerVelDir = {
+                x: speakerVel.x / speakerVelMag,
+                y: speakerVel.y / speakerVelMag
+            }
 
-            if (positionDifferenceMag > maxSpeakerSpeed * dt) { // getting to the mouse would require going faster than the speed limit, so make it lag behind
-                const positionDifferenceClamped = {
-                    x: positionDifference.x / positionDifferenceMag * maxSpeakerSpeed * dt,
-                    y: positionDifference.y / positionDifferenceMag * maxSpeakerSpeed * dt
-                }
-                speakerPos.x = clamp(speakerPos.x + positionDifferenceClamped.x, 0, canvas.clientWidth)
-                speakerPos.y = clamp(speakerPos.y + positionDifferenceClamped.y, 0, canvas.clientHeight)
+            const newSpeakerVelMag = maxSpeakerSpeed * (speakerVelMag / (maxSpeakerSpeed + speakerVelMag))
+            speakerVel = {
+                x: newSpeakerVelMag * speakerVelDir.x,
+                y: newSpeakerVelMag * speakerVelDir.y
             }
-            else {
-                speakerPos.x = clamp(cursor.x, 0, canvas.clientWidth)
-                speakerPos.y = clamp(cursor.y, 0, canvas.clientHeight)
+        }
+        else if (!speakerPos.grabbed) {
+            speakerVel = {
+                x: speakerVel.x * 0.9,
+                y: speakerVel.y * 0.9
             }
+        }
+        speakerPos = {
+            x: speakerPos.x + speakerVel.x * dt,
+            y: speakerPos.y + speakerVel.y * dt,
+            grabbed: speakerPos.grabbed
         }
 
         // every few frames, update the gpu about the speaker

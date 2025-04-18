@@ -60,9 +60,9 @@ fn colorRamp5(value: f32, colors: array<RampColor, 5>) -> vec3f {
     let fThis = f(vThis, g);
     let fNext = f(vNext, g);
 
-    if (fThis >= 1 && fNext <= 1) {
+    if (fThis >= 1 && fNext <= 1) { //the wave was emitted during the time interval that this workgroup is checking
         let midTime = mapRange(1, fThis, fNext, vThis[2], vNext[2]);
-        let waveValue = wave(midTime);
+        let waveValue = wave(midTime); //so the wave at this point is the same value as the wave that was emitted during the time that this workgroup is checking
         let c = colorRamp5(
             waveValue*0.85,
             array(

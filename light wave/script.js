@@ -1,41 +1,259 @@
-// Importing the shader code from the different files. By code, I mean literally a long string containing the code.
-// They are really js files containing only the string, the .wgsl is just to tell me it's wgsl (shader) code.
+import emitterTemplate from "./shaders/emitterTemplate.wgsl.js"
+import computeBoundariesCode from "./shaders/computeBoundaries.wgsl.js"
+import obstaclesDisplayCode from "./shaders/obstaclesDisplay.wgsl.js"
+import updateBoundaryCode from "./shaders/updateBoundary.wgsl.js"
 import updateCode from "./shaders/updateWave.wgsl.js"
 import colorCode from "./shaders/color.wgsl.js"
-import transcribeCode from "./shaders/transcribe.wgsl.js"
-import thetaCode from "./shaders/theta.wgsl.js"
-import propCode from "./shaders/prop.wgsl.js"
-import displayPropCode from "./shaders/displayProp.wgsl.js"
+import waveDisplayCode from "./shaders/waveDisplay.wgsl.js"
 import renderCode from "./shaders/renderWave.wgsl.js"
+
+
 
 let shouldStop = false
 document.getElementById("startButton").addEventListener("click", function () {
     shouldStop = true
 })
 
-async function start(device) {
-    let obstacleTexture = await loadTexture(
-        document.getElementById("obstacleSelect").value,
-        device
-    )
-    let iorTexture = await loadTexture(
-        document.getElementById("IORSelect").value,
-        device
-    )
-    let emitterType = document.getElementById("emitterSelect").value
-    let emitterCode = ""
-    if (emitterType == "point") {
-        emitterCode = `else if (i.x==300 && i.y==1) {`
+
+
+class Emitter {
+    constructor() {
+        this.pos = { x: 300, y: 300, grabbed: false } //in the case of an area emitter, this is the center
+        this.posA = { x: 300, y: 300, grabbed: false }
+        this.posB = { x: 300, y: 300, grabbed: false }
+        this.col = { r: 1, g: 1, b: 1 }
+        this.type = "Point"
+        this.size = 0 // if you have an area emitter that emits along 15 pixels, this will be (15-1)/2 = 7
+        this.direction = { x: 1, y: 0 } //for area emitters, a unit vector that points from one end to the other
     }
-    else if (emitterType == "direction") {
-        emitterCode = `else if (i.y==1) {`
+
+    // sets pos, size, and direction from posA and posB
+    updateFromAB() {
+        this.pos = {
+            x: (this.posA.x + this.posB.x) / 2,
+            y: (this.posA.y + this.posB.y) / 2
+        }
+
+        const distAB = Math.sqrt((this.posA.x - this.posB.x) ** 2 + (this.posA.y - this.posB.y) ** 2)
+
+        this.size = (distAB / 2) - 1
+
+        this.direction = {
+            x: (this.posB.x - this.posA.x) / distAB,
+            y: (this.posB.y - this.posA.y) / distAB
+        }
     }
-    else if (emitterType == "center") {
-        emitterCode = `else if (i.y == 300 && i.x == 300) {`
-    }
-    let numWavelengths = Number(document.getElementById("numWavelengths").value)
-    main({ obstacleTexture, iorTexture, emitterCode, numWavelengths })
 }
+
+let emitters = []
+
+document.getElementById("addEmitter").addEventListener("click", function () {
+    emitters.push(new Emitter())
+
+    updateEmittersHTML()
+})
+
+function updateEmittersHTML() {
+    const div = document.getElementById("emitters")
+    div.innerHTML = ""
+
+    for (let i = 0; i < emitters.length; i++) {
+        const container = document.createElement("div")
+        container.classList.add("emitterContainer")
+        div.append(container)
+
+        function rgbToHex(r, g, b) {
+            r = Math.round(r * 255)
+            g = Math.round(g * 255)
+            b = Math.round(b * 255)
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+        }
+        const color = document.createElement("input")
+        color.type = "color"
+        color.value = rgbToHex(emitters[i].col.r, emitters[i].col.g, emitters[i].col.b)
+        container.append(color)
+
+        color.addEventListener("input", function (e) {
+            function hexToRgb(hex) {
+                let r = 0, g = 0, b = 0
+                if (hex.length == 4) {
+                    r = parseInt(hex[1] + hex[1], 16)
+                    g = parseInt(hex[2] + hex[2], 16)
+                    b = parseInt(hex[3] + hex[3], 16)
+                } else if (hex.length == 7) {
+                    r = parseInt(hex[1] + hex[2], 16)
+                    g = parseInt(hex[3] + hex[4], 16)
+                    b = parseInt(hex[5] + hex[6], 16)
+                }
+                return { r: r / 255, g: g / 255, b: b / 255 }
+            }
+
+            const rgb = hexToRgb(e.target.value)
+            emitters[i].col = rgb
+        })
+
+        const type = document.createElement("select")
+        container.append(type)
+
+        const typePoint = document.createElement("option")
+        typePoint.innerText = "Point"
+        type.append(typePoint)
+
+        const typeArea = document.createElement("option")
+        typeArea.innerText = "Area"
+        type.append(typeArea)
+
+        type.value = emitters[i].type
+
+        type.addEventListener("input", function (e) {
+            const E = emitters[i]
+            E.type = e.target.value
+
+            if (e.target.value == "Point") {
+                E.size = 0
+            }
+            else if (e.target.value == "Area") {
+                E.size = 25
+                E.posA = {
+                    x: E.pos.x - E.size * E.direction.x,
+                    y: E.pos.y - E.size * E.direction.y,
+                    grabbed: false
+                }
+                E.posB = {
+                    x: E.pos.x + E.size * E.direction.x,
+                    y: E.pos.y + E.size * E.direction.y,
+                    grabbed: false
+                }
+            }
+        })
+
+        const remove = document.createElement("span")
+        remove.style = "background: rgb(40, 50, 50); color: white; padding: 5px; border-radius: 5px;"
+        remove.innerText = "Remove"
+        container.append(remove)
+
+        remove.addEventListener("click", function () {
+            emitters.splice(i, 1)
+            updateEmittersHTML()
+        })
+    }
+}
+
+function compileEmitterShaders() {
+    let emittersCode = []
+    for (let i = 0; i < emitters.length; i++) {
+        let e = emitters[i]
+        let c = emitterTemplate
+
+        c = c.replaceAll("_POS", `${Math.floor(e.pos.x)}, ${Math.floor(e.pos.y)}`)
+        c = c.replaceAll("_DIRVEC", `${e.direction.x}, ${e.direction.y}`)
+        c = c.replaceAll("_SIZE", e.size)
+        c = c.replaceAll("_COL", `vec3f(${e.col.r}, ${e.col.g}, ${e.col.b})`)
+
+        emittersCode.push({ code: c, numPixels: 2 * e.size + 1 })
+    }
+
+    return emittersCode
+}
+
+// draws the emitters to the icons canvas
+function updateIconsCanvas() {
+    iCtx.clearRect(0, 0, iconsCanvas.width, iconsCanvas.height)
+
+    for (let e of emitters) {
+        if (e.type == "Point") {
+            iCtx.beginPath()
+            iCtx.arc(e.pos.x, e.pos.y, 7, 0, 2 * Math.PI)
+            iCtx.fillStyle = `rgb(${e.col.r * 255}, ${e.col.g * 255}, ${e.col.b * 255})`
+            iCtx.fill()
+
+            iCtx.strokeStyle = "rgb(0, 0, 0)"
+            iCtx.lineWidth = 2
+            iCtx.stroke()
+        }
+        else if (e.type == "Area") {
+            iCtx.beginPath()
+            iCtx.moveTo(e.pos.x - e.direction.x * e.size, e.pos.y - e.direction.y * e.size)
+            iCtx.lineTo(e.pos.x + e.direction.x * e.size, e.pos.y + e.direction.y * e.size)
+            iCtx.strokeStyle = `rgb(${e.col.r * 255}, ${e.col.g * 255}, ${e.col.b * 255})`
+            iCtx.lineWidth = 4
+            iCtx.lineCap = "round"
+            iCtx.stroke()
+
+            iCtx.fillStyle = `rgb(${e.col.r * 255}, ${e.col.g * 255}, ${e.col.b * 255})`
+            iCtx.strokeStyle = "rgb(0, 0, 0)"
+            iCtx.lineWidth = 2
+
+            iCtx.beginPath()
+            iCtx.arc(e.posA.x, e.posA.y, 7, 0, 2 * Math.PI)
+            iCtx.fill()
+            iCtx.stroke()
+
+            iCtx.beginPath()
+            iCtx.arc(e.posB.x, e.posB.y, 7, 0, 2 * Math.PI)
+            iCtx.fill()
+            iCtx.stroke()
+        }
+    }
+}
+
+function clamp(v, min, max) {
+    return Math.min(Math.max(v, min), max)
+}
+function handleIconsDragging(event) {
+    const canvasBounds = canvas.getBoundingClientRect()
+    cursor = {
+        x: event.clientX - canvasBounds.left - 10,
+        y: event.clientY - canvasBounds.top - 10 //!10 is for the border width
+    }
+
+    for (let e of emitters) {
+        if (e.type == "Point") {
+            if (e.pos.grabbed) {
+                e.pos.x = clamp(cursor.x, 0, canvas.clientWidth)
+                e.pos.y = clamp(cursor.y, 0, canvas.clientHeight)
+            }
+        }
+
+        else if (e.type == "Area") {
+            if (e.posA.grabbed) {
+                e.posA.x = clamp(cursor.x, 0, canvas.clientWidth)
+                e.posA.y = clamp(cursor.y, 0, canvas.clientHeight)
+                e.updateFromAB()
+            }
+            else if (e.posB.grabbed) {
+                e.posB.x = clamp(cursor.x, 0, canvas.clientWidth)
+                e.posB.y = clamp(cursor.y, 0, canvas.clientHeight)
+                e.updateFromAB()
+            }
+        }
+    }
+}
+
+function handleMouseDown(event) {
+    for (let i = emitters.length - 1; i >= 0; i--) {
+        const e = emitters[i]
+
+        if (e.type == "Point") {
+            if ((cursor.x - e.pos.x) ** 2 + (cursor.y - e.pos.y) ** 2 < 40) {
+                e.pos.grabbed = true
+                break
+            }
+        }
+
+        else if (e.type == "Area") {
+            if ((cursor.x - e.posA.x) ** 2 + (cursor.y - e.posA.y) ** 2 < 40) {
+                e.posA.grabbed = true
+                break
+            }
+            else if ((cursor.x - e.posB.x) ** 2 + (cursor.y - e.posB.y) ** 2 < 40) {
+                e.posB.grabbed = true
+                break
+            }
+        }
+    }
+}
+
 
 // a function to load an external image as a texture
 async function loadTexture(url, device) {
@@ -66,7 +284,10 @@ async function loadTexture(url, device) {
     return texture
 }
 
-let device; let canvas; let context; let presentationFormat
+
+
+let device; let canvas; let context; let presentationFormat; let iconsCanvas; let iCtx; let cursor = { x: 0, y: 0 }
+// runs once when the page is first opened
 async function setup() {
     // set up the device (gpu)
     const adapter = await navigator.gpu?.requestAdapter()
@@ -87,10 +308,41 @@ async function setup() {
         format: presentationFormat,
     })
 
+
+
+    iconsCanvas = new OffscreenCanvas(canvas.clientWidth, canvas.clientHeight)
+    iCtx = iconsCanvas.getContext("2d")
+
+
+    canvas.addEventListener("mousemove", handleIconsDragging)
+    canvas.addEventListener("mousedown", handleMouseDown)
+    canvas.addEventListener("mouseup", function (e) {
+        for (let e of emitters) { e.pos.grabbed = false; e.posA.grabbed = false; e.posB.grabbed = false }
+    })
+
     start(device)
 }
 setup()
 
+
+// sets everything up to run the simulation
+async function start(device) {
+    let obstacleTexture = await loadTexture(
+        document.getElementById("obstacleSelect").value,
+        device
+    )
+
+    let iorTexture = await loadTexture(
+        document.getElementById("IORSelect").value,
+        device
+    )
+
+    let numWavelengths = Number(document.getElementById("numWavelengths").value)
+    main({ obstacleTexture, iorTexture, emitterCode: compileEmitterShaders(), numWavelengths })
+}
+
+
+// runs the simulation
 async function main(scene) {
     // Tells the fragment shader how to sample images. This blends pixels linearly and repeats the image for values out of the bounds of [0, 1]
     const linearSampler = device.createSampler({
@@ -102,67 +354,27 @@ async function main(scene) {
         mipmapFilter: "linear",
     })
 
-    // -----------------theta setup----------------- //
-    const thetaModule = device.createShaderModule({
-        code: thetaCode
-    })
-
-    const thetaPipeline = device.createComputePipeline({
-        layout: "auto",
-        compute: { module: thetaModule }
-    })
-
-    const thetaTexture = device.createTexture({
-        format: "r32float",
-        dimension: "3d",
-        size: [canvas.clientWidth, canvas.clientHeight, scene.numWavelengths],
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
-    })
-
-    // -----------------prop(agation) setup-----------------//
-    const propModule = device.createShaderModule({
-        code: propCode
-    })
-
-    const propPipeline = device.createComputePipeline({
-        layout: "auto",
-        compute: { module: propModule }
-    })
-
-    const propTexture = device.createTexture({
-        format: "rg32float",
-        dimension: "3d",
-        size: [canvas.clientWidth, canvas.clientHeight, scene.numWavelengths],
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
-    })
-
-    const propBindGroup = device.createBindGroup({
-        layout: propPipeline.getBindGroupLayout(0),
-        entries: [
-            { binding: 0, resource: propTexture.createView() },
-            { binding: 1, resource: thetaTexture.createView() },
-            { binding: 2, resource: scene.obstacleTexture.createView() }
-        ]
-    })
-
-    // -----------------update setup----------------- //
-
-    const updateModule = device.createShaderModule({
-        label: "wave update shader module",
-        code:
-            updateCode
-                .replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
-                .replace("_EMITTER", scene.emitterCode)
-    })
-
-    const updatePipeline = device.createComputePipeline({ //this is going to be a compute pipeline because i'm not rendering an image, but instead using the gpu to compute a bunch of values (outputting a bunch of floats formatted in a texture because it's easy)
-        label: "wave update pipeline",
-        layout: "auto",
-        compute: { module: updateModule } //use the code for updating
-    })
+    // -----------------textures setup----------------- //
 
     const obstaclesTexture = scene.obstacleTexture
     const iorTexture = scene.iorTexture
+
+    const iconsTexture = device.createTexture({
+        label: "texture showing where the emitters are",
+        format: "rgba8unorm",
+        size: [canvas.clientWidth, canvas.clientHeight],
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST
+    })
+    function updateIconsTexture() {
+        const bitmap = iconsCanvas.transferToImageBitmap()
+        device.queue.copyExternalImageToTexture(
+            { source: bitmap },
+            { texture: iconsTexture },
+            [canvas.clientWidth, canvas.clientHeight]
+        )
+    }
+
+
 
     // to do the simulation (to approximate a second derivative), I need to store 3 frames: this one, the last one, and the before-last one
     // so I have an array of 3 and cycle through them, keeping track of which is the most recent
@@ -178,19 +390,150 @@ async function main(scene) {
         })
     }
 
-    // this is going to be a buffer that can be sent right to the gpu so that I can send information from the cpu to the gpu
-    // it's called a uniform because it's the same (uniform) for every thread of the gpu
-    const updateUniformsBuffer = device.createBuffer({
+    // -----------------computing boundaries----------------- //
+
+    const boundariesTexture = device.createTexture({
+        label: "texture containing the boundaries of the simulation",
+        format: "rg32float",
+        dimension: "2d",
+        size: [canvas.clientWidth, canvas.clientHeight],
+        usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
+    })
+
+    const computeBoundariesModule = device.createShaderModule({
+        label: "module to compute the boundaries",
+        code: computeBoundariesCode
+    })
+
+    const computeBoundariesPipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: { module: computeBoundariesModule }
+    })
+
+    const computeBoundariesBindGroup = device.createBindGroup({
+        layout: computeBoundariesPipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: boundariesTexture.createView() },
+            { binding: 1, resource: obstaclesTexture.createView() }
+        ]
+    })
+
+    const computeBoundariesEncoder = device.createCommandEncoder()
+    const computeBoundariesPass = computeBoundariesEncoder.beginComputePass()
+    computeBoundariesPass.setPipeline(computeBoundariesPipeline)
+    computeBoundariesPass.setBindGroup(0, computeBoundariesBindGroup)
+    computeBoundariesPass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+    computeBoundariesPass.end()
+
+    const computeBoundariesCommandBuffer = computeBoundariesEncoder.finish()
+    device.queue.submit([computeBoundariesCommandBuffer])
+
+    // -----------------making a texture to display obstacles----------------- //
+
+    const obstacleDisplayTexture = device.createTexture({
+        label: "texture with the obstacle texture to be displayed",
+        format: "rgba8unorm",
+        dimension: "2d",
+        size: [canvas.clientWidth, canvas.clientHeight],
+        usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
+    })
+
+    const obstacleDisplayModule = device.createShaderModule({
+        label: "module to make a display texture for the obstacles",
+        code: obstaclesDisplayCode
+    })
+
+    const obstacleDisplayPipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: { module: obstacleDisplayModule }
+    })
+
+    const obstacleDisplayBindGroup = device.createBindGroup({
+        layout: obstacleDisplayPipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: obstacleDisplayTexture.createView() },
+            { binding: 1, resource: scene.obstacleTexture.createView() },
+            { binding: 2, resource: boundariesTexture.createView() }
+        ]
+    })
+
+    const obstacleDisplayEncoder = device.createCommandEncoder()
+    const obstacleDisplayPass = obstacleDisplayEncoder.beginComputePass()
+    obstacleDisplayPass.setPipeline(obstacleDisplayPipeline)
+    obstacleDisplayPass.setBindGroup(0, obstacleDisplayBindGroup)
+    obstacleDisplayPass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+    obstacleDisplayPass.end()
+
+    const obstacleDisplayCommandBuffer = obstacleDisplayEncoder.finish()
+    device.queue.submit([obstacleDisplayCommandBuffer])
+
+    // -----------------emit setup----------------- //
+
+    let emittersSetup = []
+    for (let i = 0; i < scene.emitterCode.length; i++) {
+        const module = device.createShaderModule({
+            label: `module for emitter ${i}`,
+            code: scene.emitterCode[i].code.replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
+        })
+
+        const pipeline = device.createComputePipeline({
+            label: `pipeline for emitter ${i}`,
+            layout: "auto",
+            compute: { module }
+        })
+
+        emittersSetup.push({ module, pipeline, numPixels: scene.emitterCode[i].numPixels })
+    }
+
+    const emitUniformsBuffer = device.createBuffer({
         size: 4,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
-    const updateUniformsValues = new ArrayBuffer(4)
-    const updateUniformsViews = {
-        time: new Float32Array(updateUniformsValues),
+    const emitUniformsValues = new ArrayBuffer(4)
+    const emitUniformsViews = {
+        time: new Float32Array(emitUniformsValues, 0, 1),
     }
 
-    // setting the initial values of the uniforms
-    updateUniformsViews.time[0] = 0
+    emitUniformsViews.time[0] = 0
+
+    // bind group set later
+
+
+    // -----------------update boundary setup-----------------//
+
+    const updateBoundaryModule = device.createShaderModule({
+        label: "update boundary texels module",
+        code:
+            updateBoundaryCode
+                .replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
+    })
+
+    const updateBoundaryPipeline = device.createComputePipeline({
+        layout: "auto",
+        compute: { module: updateBoundaryModule }
+    })
+
+    // bind group set later
+
+
+    // -----------------update setup----------------- //
+
+    const updateModule = device.createShaderModule({
+        label: "wave update shader module",
+        code:
+            updateCode
+                .replace("_NUMWAVELENGTHS", `const numWavelengths = ${scene.numWavelengths};`)
+        // .replace("_EMITTER", scene.emitterCode)
+    })
+
+    const updatePipeline = device.createComputePipeline({
+        label: "wave update pipeline",
+        layout: "auto",
+        compute: { module: updateModule }
+    })
+
+    // bind group set later
+
 
     // -----------------color setup----------------- //
     const colorModule = device.createShaderModule({
@@ -222,21 +565,21 @@ async function main(scene) {
     }
     colorUniformsViews.brightness[0] = 0
 
-    // -----------------transcription setup----------------- //
-    //* the wave is in an r32float texture, it needs to be transcribed to an rgba8unorm with a compute shader so that it can be rendered in a fragment shader and shown to the user
 
-    const transcribeModule = device.createShaderModule({
+    // -----------------wave display setup----------------- //
+
+    const waveDisplay = device.createShaderModule({
         label: "wave texture transcribe module",
-        code: transcribeCode
+        code: waveDisplayCode
     })
 
-    const transcribePipeline = device.createComputePipeline({
+    const waveDisplayPipeline = device.createComputePipeline({
         label: "wave texture transcribe pipeline",
         layout: "auto",
-        compute: { module: transcribeModule }
+        compute: { module: waveDisplay }
     })
 
-    const transcribedWaveTexture = device.createTexture({ // <- this texture will be what the user will see
+    const waveDisplayTexture = device.createTexture({
         label: "transcribed wave texture to an rgba8unorm texture",
         format: "rgba8unorm",
         dimension: "2d",
@@ -244,46 +587,21 @@ async function main(scene) {
         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
     })
 
-    // -----------------display prop setup-----------------//
-    const displayPropModule = device.createShaderModule({
-        code: displayPropCode
-    })
-
-    const displayPropPipeline = device.createComputePipeline({
-        layout: "auto",
-        compute: { module: displayPropModule }
-    })
-
-    const displayPropTexture = device.createTexture({
-        format: "rgba8unorm",
-        dimension: "2d",
-        size: [canvas.clientWidth, canvas.clientHeight],
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
-    })
-
-    const displayPropBindGroup = device.createBindGroup({
-        layout: displayPropPipeline.getBindGroupLayout(0),
-        entries: [
-            { binding: 0, resource: displayPropTexture.createView() },
-            { binding: 1, resource: propTexture.createView() }
-        ]
-    })
 
     // -----------------render setup----------------- //
-    // to get the texture on the screen, we need a third shader because compute shaders can't write to a canvas
 
     const renderModule = device.createShaderModule({
         label: "wave render module",
         code: renderCode
     })
 
-    const renderPipeline = device.createRenderPipeline({ //notice it's not a compute pipeline anymore
+    const renderPipeline = device.createRenderPipeline({
         label: "wave render pipeline",
         layout: "auto",
-        vertex: { //needs vertex information (which will just be two triangles that cover the whole screen)
+        vertex: {
             module: renderModule
         },
-        fragment: { //and fragment information (what to draw on those triangles)
+        fragment: {
             module: renderModule,
             targets: [{ format: presentationFormat }]
         }
@@ -297,20 +615,18 @@ async function main(scene) {
     const renderUniformsViews = {
         renderMode: new Int32Array(renderUniformsValues),
     }
-    // setting the initial values of the uniforms
+
     renderUniformsViews.renderMode[0] = 1
 
-    // for the other shaders, the bind group is set each frame because it changes. this one can just be done once at the beginning
-    // this is what the gpu gets sent from the cpu
     const renderBindGroup = device.createBindGroup({
         layout: renderPipeline.getBindGroupLayout(0),
         entries: [
-            { binding: 0, resource: transcribedWaveTexture.createView() }, //<- the wave texture to render
+            { binding: 0, resource: waveDisplayTexture.createView() }, //<- the wave texture to render
             { binding: 1, resource: colorTexture.createView() },
             { binding: 2, resource: linearSampler }, //<- a sampler, telling the shader how to sample the texture
-            { binding: 3, resource: obstaclesTexture.createView() }, //<- the texture containing the obstacles, because I want to overlay the obstacles on top of the wave
+            { binding: 3, resource: obstacleDisplayTexture.createView() }, //<- the texture containing the obstacles, because I want to overlay the obstacles on top of the wave
             { binding: 4, resource: iorTexture.createView() },
-            { binding: 5, resource: displayPropTexture.createView() },
+            { binding: 5, resource: iconsTexture.createView() },
             { binding: 6, resource: { buffer: renderUniformsBuffer } },
         ]
     })
@@ -320,15 +636,17 @@ async function main(scene) {
         colorAttachments: [
             {
                 // view: <- to be filled out when we render (it's what we render to)
-                clearValue: [0.3, 0.3, 0.3, 1], //these are just kinda defaults that make the render pass act as you would expect
+                clearValue: [0.3, 0.3, 0.3, 1],
                 loadOp: "clear",
                 storeOp: "store"
             }
         ]
     }
 
+
+
     let frameCount = 0
-    async function render() { // this gets called each frame
+    async function render() {
         if (shouldStop) {
             shouldStop = false
             await start(device)
@@ -338,20 +656,61 @@ async function main(scene) {
         frameCount++
         document.getElementById("frameCount").innerHTML = "Time Elapsed: " + (frameCount * 0.065).toFixed(1) + "fs"
 
+        // -----------------emit stuff----------------- //
+
+        emitUniformsViews.time[0] = frameCount
+        device.queue.writeBuffer(emitUniformsBuffer, 0, emitUniformsValues)
+
+        for (let i = 0; i < emittersSetup.length; i++) {
+            const emitBindGroup = device.createBindGroup({
+                layout: emittersSetup[i].pipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: waveTextures[lastUpdatedTexture].createView() },
+                    { binding: 1, resource: iorTexture.createView() },
+                    { binding: 2, resource: { buffer: emitUniformsBuffer } }
+                ]
+            })
+
+            const emitEncoder = device.createCommandEncoder()
+            const emitComputePass = emitEncoder.beginComputePass()
+            emitComputePass.setPipeline(emittersSetup[i].pipeline)
+            emitComputePass.setBindGroup(0, emitBindGroup)
+            emitComputePass.dispatchWorkgroups(emittersSetup[i].numPixels, 1, scene.numWavelengths)
+            emitComputePass.end()
+            const emitCommandBuffer = emitEncoder.finish()
+            device.queue.submit([emitCommandBuffer])
+        }
+
+
+        // -----------------update boundary stuff----------------- //
+        const updateBoundaryBindGroup = device.createBindGroup({
+            layout: updateBoundaryPipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: waveTextures[lastUpdatedTexture].createView() }, //we're editing the last texture
+                { binding: 1, resource: waveTextures[(lastUpdatedTexture + 2) % 3].createView() }, //with the help of the before-last texture
+                { binding: 2, resource: boundariesTexture.createView() },
+                { binding: 3, resource: obstaclesTexture.createView() } //has the color of the boundary
+            ]
+        })
+
+        const updateBoundaryEncoder = device.createCommandEncoder()
+        const updateBoundaryComputePass = updateBoundaryEncoder.beginComputePass()
+        updateBoundaryComputePass.setPipeline(updateBoundaryPipeline)
+        updateBoundaryComputePass.setBindGroup(0, updateBoundaryBindGroup)
+        updateBoundaryComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight, scene.numWavelengths)
+        updateBoundaryComputePass.end()
+        const updateBoundaryCommandBuffer = updateBoundaryEncoder.finish()
+        device.queue.submit([updateBoundaryCommandBuffer])
+
         // -----------------update stuff----------------- //
-        updateUniformsViews.time[0] = frameCount
-        device.queue.writeBuffer(updateUniformsBuffer, 0, updateUniformsValues) //<- update the buffer object
 
         const updateBindGroup = device.createBindGroup({
             layout: updatePipeline.getBindGroupLayout(0),
             entries: [
-                { binding: 0, resource: { buffer: updateUniformsBuffer } }, //all the uniforms
-                { binding: 1, resource: waveTextures[(lastUpdatedTexture + 1) % 3].createView() }, //the texture we're going to be updating (after this, it will be the most recent)
-                { binding: 2, resource: waveTextures[lastUpdatedTexture].createView() }, //the last texture that was updated
-                { binding: 3, resource: waveTextures[(lastUpdatedTexture + 2) % 3].createView() }, //the before-last texture
-                { binding: 4, resource: obstaclesTexture.createView() }, //the obstacles
-                { binding: 5, resource: iorTexture.createView() },
-                // { binding: 6, resource: propTexture.createView() }
+                { binding: 0, resource: waveTextures[(lastUpdatedTexture + 1) % 3].createView() }, //the texture we're going to be updating (after this, it will be the most recent)
+                { binding: 1, resource: waveTextures[lastUpdatedTexture].createView() }, //the last texture that was updated
+                { binding: 2, resource: waveTextures[(lastUpdatedTexture + 2) % 3].createView() }, //the before-last texture
+                { binding: 3, resource: iorTexture.createView() }
             ]
         })
 
@@ -367,14 +726,12 @@ async function main(scene) {
         updateComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight, scene.numWavelengths) //make each pixel be dealt with by its own thread (that's what makes the gpu so powerful) (technically a workgroup can be multiple threads, but in gpu code I say it's just one)
         updateComputePass.end()
         const updateCommandBuffer = updateEncoder.finish()
-        device.queue.submit([updateCommandBuffer]) //actually makes the gpu run code
+        device.queue.submit([updateCommandBuffer])
 
-        // at this point, the most recent texture has been successfully updated
-
-        lastUpdatedTexture = (lastUpdatedTexture + 1) % 3 //a new texture has just been updated
+        lastUpdatedTexture = (lastUpdatedTexture + 1) % 3
 
         // -----------------color stuff-----------------
-        colorUniformsViews.brightness[0] = Math.pow(10,document.getElementById("brightness").value)
+        colorUniformsViews.brightness[0] = Math.pow(10, document.getElementById("brightness").value)
         device.queue.writeBuffer(colorUniformsBuffer, 0, colorUniformsValues)
         const colorBindGroup = device.createBindGroup({
             layout: colorPipeline.getBindGroupLayout(0),
@@ -394,69 +751,33 @@ async function main(scene) {
         const colorCommandBuffer = colorEncoder.finish()
         device.queue.submit([colorCommandBuffer])
 
-        // -----------------transcription stuff----------------- //
-        const transcribeBindGroup = device.createBindGroup({
-            layout: transcribePipeline.getBindGroupLayout(0),
+        // -----------------wave display stuff----------------- //
+        const waveDisplayBindGroup = device.createBindGroup({
+            layout: waveDisplayPipeline.getBindGroupLayout(0),
             entries: [
-                { binding: 0, resource: transcribedWaveTexture.createView() },
+                { binding: 0, resource: waveDisplayTexture.createView() },
                 { binding: 1, resource: waveTextures[lastUpdatedTexture].createView() },
                 { binding: 2, resource: { buffer: colorUniformsBuffer } }
             ]
         })
 
-        const transcribeEncoder = device.createCommandEncoder({
+        const waveDisplayEncoder = device.createCommandEncoder({
             label: "wave texture transcribe command encoder"
         })
-        const transcribeComputePass = transcribeEncoder.beginComputePass({
+        const waveDisplayComputePass = waveDisplayEncoder.beginComputePass({
             label: "wave texture transcribe compute pass"
         })
-        transcribeComputePass.setPipeline(transcribePipeline)
-        transcribeComputePass.setBindGroup(0, transcribeBindGroup)
-        transcribeComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
-        transcribeComputePass.end()
-        const transcribeCommandBuffer = transcribeEncoder.finish()
-        device.queue.submit([transcribeCommandBuffer])
-
-        // -----------------theta stuff-----------------
-        // const thetaBindGroup = device.createBindGroup({
-        //     layout: thetaPipeline.getBindGroupLayout(0),
-        //     entries: [
-        //         { binding: 0, resource: thetaTexture.createView() },
-        //         { binding: 1, resource: waveTextures[lastUpdatedTexture].createView() }
-        //     ]
-        // })
-
-        // const thetaEncoder = device.createCommandEncoder()
-        // const thetaComputePass = thetaEncoder.beginComputePass()
-        // thetaComputePass.setPipeline(thetaPipeline)
-        // thetaComputePass.setBindGroup(0, thetaBindGroup)
-        // thetaComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight, scene.numWavelengths)
-        // thetaComputePass.end()
-        // const thetaCommandBuffer = thetaEncoder.finish()
-        // device.queue.submit([thetaCommandBuffer])
-
-        // // -----------------prop stuff----------------- //
-
-        // const propEncoder = device.createCommandEncoder()
-        // const propComputePass = propEncoder.beginComputePass()
-        // propComputePass.setPipeline(propPipeline)
-        // propComputePass.setBindGroup(0, propBindGroup)
-        // propComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight, scene.numWavelengths)
-        // propComputePass.end()
-        // const propCommandBuffer = propEncoder.finish()
-        // device.queue.submit([propCommandBuffer])
-
-        // //  -----------------display prop stuff----------------- //
-        // const displayPropEncoder = device.createCommandEncoder()
-        // const displayPropComputePass = displayPropEncoder.beginComputePass()
-        // displayPropComputePass.setPipeline(displayPropPipeline)
-        // displayPropComputePass.setBindGroup(0, displayPropBindGroup)
-        // displayPropComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
-        // displayPropComputePass.end()
-        // const displayPropCommandBuffer = displayPropEncoder.finish()
-        // device.queue.submit([displayPropCommandBuffer])
+        waveDisplayComputePass.setPipeline(waveDisplayPipeline)
+        waveDisplayComputePass.setBindGroup(0, waveDisplayBindGroup)
+        waveDisplayComputePass.dispatchWorkgroups(canvas.clientWidth, canvas.clientHeight)
+        waveDisplayComputePass.end()
+        const waveDisplayCommandBuffer = waveDisplayEncoder.finish()
+        device.queue.submit([waveDisplayCommandBuffer])
 
         // -----------------render stuff----------------- //
+        updateIconsCanvas()
+        updateIconsTexture()
+
         renderPassDescriptor.colorAttachments[0].view = context.getCurrentTexture().createView() //set the target of the shader to be the canvas
 
         const renderMode = document.getElementById("renderSelect").value
@@ -487,3 +808,11 @@ async function main(scene) {
     }
     requestAnimationFrame(render)
 }
+
+/*
+TODO:
+
+figure out what's going on with dx dy ds and that weird constant at the wavelength calculation
+make point emitters emit from a circle and not a point to make it less square?
+option to make area emitters directional by putting a layer of 0 wave on one side
+*/
