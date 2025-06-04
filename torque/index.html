@@ -1,35 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Sketch</title>
 
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="../base.css">
 
     <script src="libraries/p5.min.js"></script>
     <script src="libraries/p5.sound.min.js"></script>
 
     <script src="sketch.js"></script>
-  </head>
+</head>
 
-  <body>
-    <script src="sketch.jk" defer></script>
+<body>
     <div id="canvasContainer"></div>
 
     <div id="netTorqueDisplay" style="font-size: 18px; font-weight: bold; color: white; padding: 10px;"></div>
 
     <label>
-      <input type="checkbox" id="toggleTorqueForces" checked>
-      Only Display Force Relevant to Torque (Y-Component of Force)
-  </label>
+        <input type="checkbox" id="toggleTorqueForces" checked>
+        Only Display Force Relevant to Torque (Y-Component of Force)
+    </label>
+    <h2>Controls</h2>
 
-    <div class="optionsCategory">
-      <h2>Controls</h2>
-
-      <p>All inputs are in SI units.<p>
-        <fieldset>
+    <div class="group">
         <legend>Bar Properties</legend>
         <label for="lengthInput">Length of Bar (m):</label>
         <input type="number" id="lengthInput" min="0" max="400">
@@ -39,9 +36,8 @@
         <br>
         <label for="pivotInput">Position of Pivot From Left (m):</label>
         <input type="number" id="pivotInput" min="0" max="400">
-      </fieldset>
-      <br>
-      <fieldset>
+    </div>
+    <div class="group">
         <legend>Force Properties</legend>
         <label for="forcePositionInput">Position of Force From Left (m):</label>
         <input type="number" id="forcePositionInput" min="0" max="400">
@@ -51,23 +47,22 @@
         <br>
         <label for="forceInputY">Y-component of Force (N):</label>
         <input type="number" id="forceInputY" min="-1000" max="1000">
-      <br>
-      </fieldset>
-      <br>
+        <br>
         <button id="inputForceButton" type="button">Add Force</button>
-
-      <button id="startButton" type="button">Start Simulation</button>
-    </form>
-  </div>
+    </div>
+    <button id="startButton" type="button">Start Simulation</button>
+    <br>
 </body>
+
 </html>
 
 
 
-      
 
-  
-    </div>
 
-  </body>
+
+</div>
+
+</body>
+
 </html>
