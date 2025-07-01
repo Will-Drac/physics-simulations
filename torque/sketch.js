@@ -13,7 +13,7 @@ let forcesTemp = []
 
 let pivotX = -pivot * (400 / length)
 
-
+let isRunning = false
         
 
 function setup() {
@@ -46,15 +46,25 @@ function setup() {
         length = parseFloat(lengthInput.value)
         mass = parseFloat(massInput.value)
         pivot = parseFloat(pivotInput.value)
+
+        angularVelocity = 0
+        angularAcceleration = 0
+        angle = 0
+        isRunning = true
     })
+
+    document.getElementById("stopButton").addEventListener("click", function () {
+        isRunning = false
+    }) 
 }
+
 
         
 let t = 0 //a variable to keep track of the time since the simulation started
 function draw() {
     background(51) //filling the background of the canvas with a solid color (i think this looks nice but you can do whatever with it)
     //p5 keeps track of deltaTime, which is the time between frames in milliseconds. adding this (converted to seconds) to our tally of the time keeps the time up to date
-
+    if (isRunning) {
     let momentOfInertia = calculateMomentOfInertia(mass, length, pivot)
    
         
@@ -65,7 +75,7 @@ function draw() {
     angularAcceleration = netTorque / momentOfInertia
     angularVelocity += angularAcceleration * (deltaTime / 1000)
     angle += angularVelocity * (deltaTime / 1000)
-
+    }
 
     // bar
     push();

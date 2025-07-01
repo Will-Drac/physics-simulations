@@ -21,7 +21,7 @@
     <div id="netTorqueDisplay" style="font-size: 18px; font-weight: bold; color: white; padding: 10px;"></div>
 
     <label>
-        <input type="checkbox" id="toggleTorqueForces" checked>
+        <input type="checkbox" id="toggleTorqueForces" unchecked>
         Only Display Force Relevant to Torque (Y-Component of Force)
     </label>
     <h2>Controls</h2>
@@ -29,29 +29,30 @@
     <div class="group">
         <legend>Bar Properties</legend>
         <label for="lengthInput">Length of Bar (m):</label>
-        <input type="number" id="lengthInput" min="0" max="400">
+        <input type="number" id="lengthInput" min="0" max="400" value="100">
         <br>
         <label for="massInput">Mass of Bar (kg):</label>
-        <input type="number" id="massInput" min="0" max="500">
+        <input type="number" id="massInput" min="0" max="500" value="20">
         <br>
         <label for="pivotInput">Position of Pivot From Left (m):</label>
-        <input type="number" id="pivotInput" min="0" max="400">
+        <input type="number" id="pivotInput" min="0" max="400" value="50">
     </div>
     <div class="group">
         <legend>Force Properties</legend>
         <label for="forcePositionInput">Position of Force From Left (m):</label>
-        <input type="number" id="forcePositionInput" min="0" max="400">
+        <input type="number" id="forcePositionInput" min="0" max="400" value="25">
         <br>
         <label for="forceInputX">X-component of Force (N):</label>
-        <input type="number" id="forceInputX" min="-1000" max="1000">
+        <input type="number" id="forceInputX" min="-1000" max="1000" value="500">
         <br>
         <label for="forceInputY">Y-component of Force (N):</label>
-        <input type="number" id="forceInputY" min="-1000" max="1000">
+        <input type="number" id="forceInputY" min="-1000" max="1000" value="300">
         <br>
         <button id="inputForceButton" type="button">Add Force</button>
     </div>
-    <button id="startButton" type="button">Start Simulation</button>
-    <br>
+    <button id="startButton" type="button">Start</button> 
+    <button id="stopButton">Stop</button>
+
 </body>
 
 </html>
